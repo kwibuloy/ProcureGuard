@@ -18,7 +18,7 @@ It reads cleaned contracts from PostgreSQL, derives red-flag indicators, scores 
 ## Rules for this layer
 
 - **Exactly three indicators**, as fixed by the paper:
-  1. Single-bidder win.
+  1. Single-bidder win. PhilGEPS publishes no bidder count, so this uses the notice's document request count as a proxy (`docs/data-source.md`). Name and describe it as a proxy; a count of 1 means one supplier requested the bidding documents, not that one bid was submitted. Contracts with no count stay unscored on this indicator.
   2. Repeated-winner concentration: how often the same supplier wins from the same procuring entity.
   3. Price deviation: awarded price relative to the median price of comparable contracts.
   Adding indicators changes the study's scope, so raise it with the user instead of adding one.

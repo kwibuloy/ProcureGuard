@@ -12,6 +12,7 @@ const file = input.tool_input?.file_path;
 if (!file) process.exit(0);
 
 const abs = path.resolve(root, file);
+if (!existsSync(abs)) process.exit(0);
 const rel = path.relative(root, abs).replace(/\\/g, '/');
 const area = rel.split('/')[0];
 const ext = path.extname(rel).toLowerCase();
