@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Data: raw PhilGEPS downloads and derived files are reproducible, not versioned
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Trained models
+*.joblib
+*.pkl
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Claude Code: personal settings stay local, shared setup is committed
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
