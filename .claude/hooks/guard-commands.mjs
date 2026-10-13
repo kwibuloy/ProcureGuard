@@ -5,14 +5,17 @@ import { readFileSync } from 'node:fs';
 const input = JSON.parse(readFileSync(0, 'utf8'));
 const command = input.tool_input?.command || '';
 
-const writeVerb = /(\brm\b|\bdel\b|\bmv\b|\bremove-item\b|\bmove-item\b|\bset-content\b|\badd-content\b|\bout-file\b|\bclear-content\b|\bsed\s+-i|\btruncate\b|>)/i;
+const writeVerb = /(\brm\b|\bdel\b|\bmv\b|\bremove-item\b|\bmove-item\b|\bset-content\b|\badd-content\b|\bout-file\b|\bclear-content\b|\bsed\s+-i|\btruncate\b)/i;
+// A redirect counts only when its target is the protected path, so `cmd > /dev/null` passes.
+const redirectsInto = (target) => new RegExp(`>\\s*["']?[^\\s"'|;&]*${target}`, 'i');
+const envFile = '\\.env(?!\\.(example|sample|template))\\b';
 
-if (/data[\\/]+raw/i.test(command) && writeVerb.test(command)) {
+if (/data[\\/]+raw/i.test(command) && (writeVerb.test(command) || redirectsInto('data[\\\\/]+raw').test(command))) {
   console.error('Blocked: data/raw/ holds raw PhilGEPS downloads and must stay exactly as downloaded. Only the pipeline download step adds files there.');
   process.exit(2);
 }
 
-if (/(^|[\s"'\\/])\.env(?!\.(example|sample|template))\b/i.test(command) && writeVerb.test(command)) {
+if (new RegExp(`(^|[\\s"'\\\\/])${envFile}`, 'i').test(command) && (writeVerb.test(command) || redirectsInto(envFile).test(command))) {
   console.error('Blocked: .env holds secrets. Change .env.example and ask the user to update their own .env.');
   process.exit(2);
 }

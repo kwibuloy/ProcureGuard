@@ -1,0 +1,6 @@
+# Shared by pipeline/ and ml/. Install into .venv at the repo root.
+requests>=2.32
+psycopg[binary]>=3.2
+python-dotenv>=1.0
+pytest>=8.0
+ruff>=0.6

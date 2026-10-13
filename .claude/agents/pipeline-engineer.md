@@ -22,8 +22,9 @@ It downloads public infrastructure and civil works procurement records from the 
 - **Structured fields only.** No OCR, text extraction or NLP on attachments.
 - **The fields that must be cleaned and standardized:** procuring entity, approved budget for the contract (ABC), number of bidders, procurement mode, award amount, posting and award dates, and winning supplier identity. Irregular agency and supplier naming matters most, because the repeated-winner indicator counts wins per supplier per procuring entity and breaks if one entity appears under several spellings.
 - **Do not guess at missing values.** Keep a missing value missing and count it. Imputing a bidder count or price would manufacture or hide a red flag.
-- **Verify the portal before coding against it.** The download is automated, but the portal's actual endpoints, file formats and column names have not been checked yet (see Open decisions in `CLAUDE.md`). Inspect the live portal or a real downloaded file, and report what you found, before writing parsing code. Never invent column names.
-- **The date range is a configuration value**, not hard-coded. The paper gives "2024 to 2025" only as an example; the final range is an open decision.
+- **Read `docs/data-source.md` before coding.** It records where the files are, which quarters are public, the real column names and the data quirks, as verified on 2026-10-13. Never invent column names; if the portal no longer matches that file, report it and update the file.
+- **The data has no bidder count.** The number-of-bidders field comes from the document request count on each legacy bid notice page, one request per notice. Fetch slowly, store every response so no notice is fetched twice, make the run resumable, and store the value under a name that says what it is (document requests), not "bidders".
+- **The date range is a configuration value**, not hard-coded. See Open decisions in `CLAUDE.md` for its current status.
 - **Migrations are forward-only numbered files.** Never edit one that has been committed; add a new one.
 
 ## When you finish
