@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, NavLink, Outlet, Route, Routes } from 'react-router-dom';
-import { useApi, type Overview } from './api';
+import { BrowserRouter, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { useApi, withRun, type Overview } from './api';
 import { Icon } from './components/Icon';
+import { useSpotlight } from './components/useSpotlight';
 import { formatDate } from './format';
 import type { OverviewContext } from './overview';
+import { ComparePage } from './pages/ComparePage';
 import { ContractPanel } from './pages/ContractPanel';
+import { DataQualityPage } from './pages/DataQualityPage';
 import { MethodPage } from './pages/MethodPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { QueuePage } from './pages/QueuePage';
+import { RunProvider, useRuns } from './run';
 
 type Theme = 'light' | 'dark';
 
@@ -42,9 +47,43 @@ function ThemeToggle() {
   );
 }
 
+/** Chooses which model's scoring run every page shows. */
+function RunPicker({ shownId }: { shownId: number | null }) {
+  const { runs, select } = useRuns();
+  if (runs.length < 2 || shownId === null) return null;
+  return (
+    <label className="run-picker">
+      <span>Scoring run</span>
+      <select value={shownId} onChange={(event) => select(Number(event.target.value))}>
+        {runs.map((run) => (
+          <option key={run.id} value={run.id}>
+            {run.modelName} · {formatDate(run.createdAt)} · run {run.id}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+const NAV = [
+  { to: '/', label: 'Review queue', also: ['/contracts', '/profile'] },
+  { to: '/compare', label: 'Compare models', also: [] },
+  { to: '/data', label: 'Data quality', also: [] },
+  { to: '/method', label: 'Method and limits', also: [] },
+];
+
 function Layout() {
-  const overview = useApi<Overview>('/api/overview');
+  const { selected } = useRuns();
+  const overview = useApi<Overview>(withRun('/api/overview', selected));
   const run = overview.data?.run ?? null;
+  const { pathname } = useLocation();
+  useSpotlight();
+
+  // A new page starts at the top; opening a contract over the queue does not move it.
+  const section = pathname.startsWith('/contracts') ? '/' : pathname;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [section]);
 
   return (
     <>
@@ -62,19 +101,25 @@ function Layout() {
             <span>ProcureGuard</span>
           </NavLink>
           <nav className="nav" aria-label="Main">
-            <NavLink to="/" className={({ isActive }) => (isActive ? 'is-active' : '')}>
-              Review queue
-            </NavLink>
-            <NavLink to="/method" className={({ isActive }) => (isActive ? 'is-active' : '')}>
-              Method and limits
-            </NavLink>
+            {NAV.map((item) => {
+              const active =
+                item.to === '/'
+                  ? pathname === '/' || item.also.some((prefix) => pathname.startsWith(prefix))
+                  : pathname.startsWith(item.to);
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={active ? 'is-active' : ''}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  {item.label}
+                </NavLink>
+              );
+            })}
           </nav>
           <div className="topbar-end">
-            {run && (
-              <span className="run-chip" title={run.modelName}>
-                Run {run.id} · {formatDate(run.createdAt)}
-              </span>
-            )}
+            <RunPicker shownId={run?.id ?? null} />
             <ThemeToggle />
           </div>
         </div>
@@ -85,8 +130,8 @@ function Layout() {
           <div className="demo-banner-inner">
             <Icon name="info" />
             <p>
-              <strong>Demonstration data.</strong> Every organization, contract and score shown here
-              is generated. Nothing on this page describes a real contract.
+              <strong>Demonstration data.</strong> Every organization and contract shown here is
+              generated. Nothing on this page describes a real contract.
             </p>
           </div>
         </div>
@@ -110,14 +155,19 @@ function Layout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<QueuePage />}>
-            <Route path="contracts/:id" element={<ContractPanel />} />
+      <RunProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<QueuePage />}>
+              <Route path="contracts/:id" element={<ContractPanel />} />
+            </Route>
+            <Route path="/profile/:kind" element={<ProfilePage />} />
+            <Route path="/compare" element={<ComparePage />} />
+            <Route path="/data" element={<DataQualityPage />} />
+            <Route path="/method" element={<MethodPage />} />
           </Route>
-          <Route path="/method" element={<MethodPage />} />
-        </Route>
-      </Routes>
+        </Routes>
+      </RunProvider>
     </BrowserRouter>
   );
 }

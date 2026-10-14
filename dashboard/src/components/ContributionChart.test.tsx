@@ -17,7 +17,7 @@ describe('ContributionChart', () => {
     expect(screen.getAllByText('+30').length).toBeGreaterThan(0);
     expect(screen.getAllByText('−5.0').length).toBeGreaterThan(0);
     expect(screen.getByText(/1 supplier requested the bidding documents/)).toBeInTheDocument();
-    expect(screen.getByText('This could not be computed for this contract.')).toBeInTheDocument();
+    expect(screen.getByText(/Not computed for this contract/)).toBeInTheDocument();
   });
 
   it('draws bars by direction and none for a zero contribution', () => {

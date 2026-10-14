@@ -46,22 +46,25 @@ describe('explain', () => {
         amount_to_budget_ratio: 0.662,
         comparable_median_ratio: 0.977,
         comparable_count: 81,
+        comparable_basis: 'same region and budget band',
       },
     });
 
     expect(sentence).toBe(
-      'Awarded at 66.2% of the approved budget. The median for 81 comparable contracts was 97.7%.',
+      'Awarded at 66.2% of the approved budget. The median for 81 comparable contracts (same region and budget band) was 97.7%.',
     );
   });
 
-  it('says so when an indicator could not be computed', () => {
+  it('says why an indicator was not computed and how it was treated', () => {
     const sentence = explain({
-      indicator: 'price_deviation',
+      indicator: 'repeated_winner',
       value: null,
       contribution: 0,
-      context: {},
+      context: { why_missing: 'the entity awarded fewer than 5 contracts', entity_awards: 2 },
     });
 
-    expect(sentence).toBe('This could not be computed for this contract.');
+    expect(sentence).toBe(
+      'Not computed: the entity awarded fewer than 5 contracts. It was treated as typical when scoring.',
+    );
   });
 });

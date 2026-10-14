@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { daysBetween, formatDate } from '../format';
 
 interface Props {
@@ -12,7 +13,11 @@ export function Timeline({ steps }: Props) {
         const next = steps[index + 1];
         const gap = next ? daysBetween(step.date, next.date) : null;
         return (
-          <li key={step.label} className={step.date ? '' : 'is-missing'}>
+          <li
+            key={step.label}
+            className={step.date ? '' : 'is-missing'}
+            style={{ '--i': index } as CSSProperties}
+          >
             <span className="timeline-dot" aria-hidden="true" />
             {gap !== null && (
               <span className="timeline-gap">
