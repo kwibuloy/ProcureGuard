@@ -58,15 +58,22 @@ export function MethodPage() {
       <section>
         <h2>How the score is produced</h2>
         <p>
-          No list of confirmed cases of wrongdoing exists for these contracts, so the model is not
-          trained to recognise wrongdoing. It is an unsupervised anomaly detection model: it looks
-          only at how far a contract’s three indicators sit from the bulk of other contracts, and
-          gives the most isolated ones the highest scores. Scores run from 0 to 100.
+          No list of confirmed cases of wrongdoing exists for these contracts, so no model here is
+          trained to recognise wrongdoing. Two unsupervised models are compared. Isolation Forest
+          scores a contract by how easily it can be separated from the rest. The clustering model
+          groups ordinary contracts and scores each contract by its distance from the nearest large
+          group. Both look only at the three indicators, and both give scores from 0 to 100. The
+          share of contracts shown as flagged is fixed in advance, at the highest-scoring 5 percent.
         </p>
         <p>
           The explanation beside each score comes from SHAP values, which split a contract’s score
-          into the part contributed by each indicator. Those parts add up to the score, so nothing
-          about it is hidden.
+          into the part contributed by each indicator. Those parts add up to the score exactly, so
+          nothing about it is hidden.
+        </p>
+        <p>
+          Prices are compared as a share of the approved budget, against the median for contracts in
+          the same region and budget band. Where an indicator cannot be computed for a contract, it
+          is shown as not computed and treated as typical.
         </p>
       </section>
 

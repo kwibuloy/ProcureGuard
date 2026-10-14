@@ -54,26 +54,27 @@ Local addresses: database `127.0.0.1:5432`, API `127.0.0.1:3001`, dashboard `loc
 ## Layout
 
 ```
-pipeline/       download, notices, migrate, demo data (clean and load not built)
-ml/             indicators, models, SHAP
+pipeline/       download, clean, load, notices, quality, demo data
+ml/             indicators, two models, SHAP
 api/            Express API
 dashboard/      React UI
 db/migrations/  schema, forward-only
 data/raw/       PhilGEPS downloads (gitignored, protected)
 data/processed/ derived files (gitignored)
 docs/           manuscript and project documents
+tests/e2e/      one dataset through every layer
 .claude/        agents, skills, hooks
 ```
 
-`pipeline/` is partly built (its README lists what exists). `api/` and `dashboard/` are built and currently show demonstration data. `ml/` is not started. Each layer's `README.md` holds its setup and run commands; the skills read those.
+All four layers are built and the database holds the real 2024 contracts (90,247), scored without document request counts because the scrape has not run. Each layer's `README.md` holds its setup and run commands; the skills read those. `tests/e2e/` runs one small dataset through every layer.
 
 ## Open decisions
 
 Not settled. Ask the user; do not pick one.
 
-- **Definition of "comparable contracts"** for the price deviation median. `Business Category` cannot be used (see `docs/data-source.md`).
-- **Model.** Isolation Forest and a clustering-based scorer are both to be built and compared before one is chosen.
-- **Flagging threshold** that separates flagged from unflagged contracts.
+- **Which model to keep.** Isolation Forest and the clustering model are both built; the dashboard's compare page shows where they differ.
+- **Study defaults in `ml/settings.py`** (comparable contracts, budget bands, share flagged, smallest entity for repeated winner). Claude chose them as defaults and listed the reasons in `ml/README.md`; the team has not confirmed them.
+- **Whether to start the full document request scrape.**
 
 When one is decided, move it out of this list into the relevant README. Decisions already made for the pipeline (2024 only, scrape Public Bidding civil works only) are in `pipeline/README.md`.
 

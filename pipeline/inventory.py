@@ -46,7 +46,7 @@ def summarize(paths: list[Path]) -> dict:
             if malformed:
                 counts["malformed"] += 1
                 continue
-            if row["Classification"].strip().lower() != config.CIVIL_WORKS:
+            if not config.is_civil_works(row["Classification"]):
                 continue
             counts["civil_works_rows"] += 1
             entities.add(row.get("Procuring Entity (PE)") or row.get("Procuring Entity"))

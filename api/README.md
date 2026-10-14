@@ -16,14 +16,19 @@ Listens on `http://127.0.0.1:3001` (`API_PORT` in `.env` changes the port). It a
 
 ## Endpoints
 
-All serve the latest scoring run.
+Each takes an optional `run` (a scoring run id) and otherwise serves the latest run.
 
-| Endpoint                 | Returns                                                                                                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/health`        | `{ "status": "ok" }` when the database answers                                                                                                       |
-| `GET /api/overview`      | Run details, totals, score histogram, main-reason counts, filter options                                                                             |
-| `GET /api/contracts`     | A page of contracts. Query: `q`, `region`, `entityType`, `reason`, `flagged=true`, `sort` (`rank`, `amount`, `recent`), `page`, `pageSize` (max 100) |
-| `GET /api/contracts/:id` | One contract with its score, indicators, contributions and document request count                                                                    |
+| Endpoint                 | Returns                                                                                                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/health`        | `{ "status": "ok" }` when the database answers                                                                                                                                                                                                 |
+| `GET /api/runs`          | Stored scoring runs, newest first                                                                                                                                                                                                              |
+| `GET /api/overview`      | Run details, totals, score histogram, main-reason counts, filter options                                                                                                                                                                       |
+| `GET /api/contracts`     | A page of contracts, each with the figures behind its indicators. Query: `q`, `region`, `entityType`, `entity`, `awardee`, `reason`, `scoreFrom`, `scoreTo`, `flagged=true`, `sort` (`rank`, `amount`, `recent`), `page`, `pageSize` (max 100) |
+| `GET /api/contracts.csv` | Every contract matching the same filters, as a CSV download                                                                                                                                                                                    |
+| `GET /api/contracts/:id` | One contract with its score, indicators, contributions, document request count and how other runs scored it                                                                                                                                    |
+| `GET /api/profile`       | Totals and counterparties for one procuring entity or awardee. Query: `kind` (`entity` or `awardee`), `name`                                                                                                                                   |
+| `GET /api/compare`       | How two runs rank the same contracts: overlap, rank correlation, points for a scatter plot, largest disagreements. Query: `a`, `b`                                                                                                             |
+| `GET /api/data-quality`  | The latest load report, field completeness, impossible values and document request coverage                                                                                                                                                    |
 
 ## Checks
 
@@ -33,4 +38,6 @@ npm run lint
 npm run typecheck
 ```
 
-Request values only ever reach SQL as parameters. Sort order and the main-reason filter are chosen from fixed lists; a value outside the list is ignored.
+Request values only ever reach SQL as parameters. Sort order, the main-reason filter and the profile kind are chosen from fixed lists; a value outside the list is ignored. The CSV export prefixes any cell that starts with `=`, `+`, `-` or `@`, so published names cannot run as spreadsheet formulas.
+
+The end-to-end test in `tests/e2e/` starts this API against a real test database.

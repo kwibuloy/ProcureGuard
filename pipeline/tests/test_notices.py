@@ -67,18 +67,20 @@ def test_notice_page_without_a_usable_count_is_unreadable():
     assert parse_notice('<span id="lblDisplayReferenceNo">1</span>') == Notice("unreadable")
 
 
-def test_targets_are_public_bidding_civil_works_notices_once_each(tmp_path):
+def test_targets_are_awarded_public_bidding_civil_works_notices_once_each(tmp_path):
     path = tmp_path / "legacy_2024_Q1.csv"
-    path.write_text(
-        "Bid Reference No.,Classification,Procurement Mode\n"
-        "100,Civil Works,Public Bidding\n"
-        "100,Civil Works,Public Bidding\n"
-        "101,Civil Works,Negotiated Procurement\n"
-        "102,Goods,Public Bidding\n"
-        "0,Civil Works,Public Bidding\n"
-        "103,Civil Works,Public Bidding\n",
-        encoding="utf-8-sig",
-    )
+    lines = [
+        "Bid Reference No.,Classification,Procurement Mode,Awardee Organization Name",
+        "100,Civil Works,Public Bidding,Builder One",
+        "100,Civil Works,Public Bidding,Builder One",
+        "101,Civil Works,Negotiated Procurement,Builder One",
+        "102,Goods,Public Bidding,Supplier",
+        "0,Civil Works,Public Bidding,Builder One",
+        "103,Civil Works,Public Bidding,Builder Two",
+        # Never awarded, so its count would not be used.
+        "104,Civil Works,Public Bidding,NULL",
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
 
     assert list(targets([path])) == ["100", "103"]
 

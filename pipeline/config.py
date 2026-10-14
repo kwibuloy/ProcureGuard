@@ -10,8 +10,15 @@ PROCESSED_DIR = ROOT / "data" / "processed"
 # (docs/data-source.md).
 YEARS = (2024,)
 
-# Only infrastructure records are in scope.
-CIVIL_WORKS = "civil works"
+
+def is_civil_works(classification: str) -> bool:
+    """Only infrastructure records are in scope.
+
+    The legacy series says "Civil Works"; the modernized site labels the same
+    class "Civil Works - Infra Project".
+    """
+    return classification.strip().lower().startswith("civil works")
+
 
 # The document request count is collected only for competitively bid contracts.
 SCRAPE_PROCUREMENT_MODE = "Public Bidding"

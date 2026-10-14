@@ -25,7 +25,7 @@ describe('GET /api/contracts', () => {
       total: 42,
       page: 1,
       pageSize: 25,
-      items: [{ id: 1, title: 'Road' }],
+      items: [{ id: 1, title: 'Road', indicators: [] }],
     });
   });
 

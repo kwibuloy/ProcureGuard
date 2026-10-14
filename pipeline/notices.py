@@ -73,13 +73,19 @@ def parse_notice(html: str) -> Notice:
 
 
 def targets(paths: Iterable[Path]) -> Iterator[str]:
-    """Bid references of civil works notices procured by public bidding, each once."""
+    """Bid references of awarded civil works notices procured by public bidding, each once.
+
+    Only awarded contracts are scored, so a notice that was never awarded has no
+    use for a document request count. Skipping those saves about 40% of the pages.
+    """
     seen = set()
     for path in paths:
         for row, malformed in read_rows(path):
-            if malformed or row["Classification"].strip().lower() != config.CIVIL_WORKS:
+            if malformed or not config.is_civil_works(row["Classification"]):
                 continue
             if row["Procurement Mode"].strip() != config.SCRAPE_PROCUREMENT_MODE:
+                continue
+            if row.get("Awardee Organization Name", "").strip() in NO_BID_NOTICE:
                 continue
             reference = row["Bid Reference No."].strip()
             if reference in NO_BID_NOTICE or reference in seen:
