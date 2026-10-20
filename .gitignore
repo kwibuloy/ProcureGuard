@@ -32,3 +32,6 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Vercel: local project link and dev cache
+.vercel/
