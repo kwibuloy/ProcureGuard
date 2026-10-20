@@ -26,6 +26,9 @@ export const formatPesoCompact = (value: number | null) =>
 
 export const formatCount = (value: number) => whole.format(value);
 
+/** For a figure that counts up: every step on the way is shown as a whole number. */
+export const wholeCount = (value: number) => formatCount(Math.round(value));
+
 /** Scores are stored from 0 to 1 and shown from 0 to 100. */
 export const toPoints = (score: number) => Math.round(score * 100);
 

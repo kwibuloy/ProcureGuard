@@ -17,7 +17,14 @@ import { ContractTable } from '../components/ContractTable';
 import { Icon } from '../components/Icon';
 import { ScoreHistogram } from '../components/ScoreHistogram';
 import { Notice, SkeletonRows, Tile } from '../components/States';
-import { formatCount, formatPercent, formatPesoCompact, plural, toPoints } from '../format';
+import {
+  formatCount,
+  formatPercent,
+  formatPesoCompact,
+  plural,
+  toPoints,
+  wholeCount,
+} from '../format';
 import { INDICATOR_ORDER, INDICATORS } from '../indicators';
 import { useOverview } from '../overview';
 import { useReviewed } from '../reviewed';
@@ -27,8 +34,6 @@ const SORT_LABELS: Record<Sort, string> = {
   amount: 'Largest contract first',
   recent: 'Most recent award first',
 };
-
-const wholeCount = (value: number) => formatCount(Math.round(value));
 
 function readQuery(params: URLSearchParams): ListQuery {
   const sort = params.get('sort');

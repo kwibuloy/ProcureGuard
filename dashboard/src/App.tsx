@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { BrowserRouter, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useApi, withRun, type Overview } from './api';
 import { Icon } from './components/Icon';
@@ -34,15 +35,45 @@ function ThemeToggle() {
   }, [theme]);
 
   const next = theme === 'dark' ? 'light' : 'dark';
+
+  /** The new theme spreads out from the button as a growing circle, where the browser can. */
+  function toggle(event: MouseEvent<HTMLButtonElement>) {
+    const root = document.documentElement;
+    const apply = () => {
+      root.dataset.theme = next;
+      flushSync(() => setTheme(next));
+    };
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reducedMotion) {
+      apply();
+      return;
+    }
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const radius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y),
+    );
+    root.style.setProperty('--theme-x', `${x}px`);
+    root.style.setProperty('--theme-y', `${y}px`);
+    root.style.setProperty('--theme-radius', `${radius}px`);
+    root.classList.add('theme-switching');
+    const done = () => root.classList.remove('theme-switching');
+    document.startViewTransition(apply).finished.then(done, done);
+  }
+
   return (
     <button
       type="button"
       className="icon-button"
-      onClick={() => setTheme(next)}
+      onClick={toggle}
       aria-label={`Switch to ${next} theme`}
       title={`Switch to ${next} theme`}
     >
-      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+      <span key={theme} className="theme-icon">
+        <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+      </span>
     </button>
   );
 }

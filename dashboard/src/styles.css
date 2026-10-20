@@ -402,6 +402,39 @@ kbd {
   cursor: default;
 }
 
+/* Switching theme: the new theme spreads from the toggle, and the icon turns into place. */
+
+.theme-icon {
+  display: grid;
+  animation: theme-icon-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes theme-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+:root.theme-switching::view-transition-old(root),
+:root.theme-switching::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation: none;
+}
+
+:root.theme-switching::view-transition-new(root) {
+  animation: theme-reveal 520ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--theme-x) var(--theme-y));
+  }
+  to {
+    clip-path: circle(var(--theme-radius) at var(--theme-x) var(--theme-y));
+  }
+}
+
 /* Demonstration banner */
 
 .demo-banner {
@@ -1740,6 +1773,27 @@ g.dots-both {
   border-bottom: 0;
 }
 
+/* Rows arrive in order, as they do in the review queue. */
+.plain-table tbody tr {
+  animation: row-in 420ms var(--ease) backwards 120ms;
+}
+
+.plain-table tbody tr:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.plain-table tbody tr:nth-child(3) {
+  animation-delay: 200ms;
+}
+
+.plain-table tbody tr:nth-child(4) {
+  animation-delay: 240ms;
+}
+
+.plain-table tbody tr:nth-child(n + 5) {
+  animation-delay: 280ms;
+}
+
 /* Loading, empty and error states */
 
 .state {
@@ -2355,6 +2409,32 @@ g.dots-both {
 .pair ul {
   margin-top: 12px;
   color: var(--ink-2);
+}
+
+/* The method page is one long article, so its sections and cards arrive in turn instead. */
+.page > .prose {
+  animation: none;
+}
+
+.prose > *,
+.pair > .card,
+.indicator-cards > .card {
+  animation: enter 460ms var(--ease) backwards;
+}
+
+.prose > :nth-child(2),
+.pair > .card:nth-child(2),
+.indicator-cards > .card:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.prose > :nth-child(3),
+.indicator-cards > .card:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.prose > :nth-child(n + 4) {
+  animation-delay: 210ms;
 }
 
 .indicator-cards {
