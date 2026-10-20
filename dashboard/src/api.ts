@@ -90,6 +90,10 @@ export interface ContractDetail {
   businessCategory: string | null;
   budget: number | null;
   amount: number | null;
+  /** Item budget of the line items this award covers; null when not published. */
+  itemBudget: number | null;
+  /** Awards that share the notice's approved budget (1 unless awarded in lots). */
+  noticeAwards: number;
   publishedDate: string | null;
   closingDate: string | null;
   awardDate: string | null;

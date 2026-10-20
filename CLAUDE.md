@@ -72,11 +72,10 @@ All four layers are built and the database holds the real 2024 contracts (90,247
 
 Not settled. Ask the user; do not pick one.
 
-- **Which model to keep.** Isolation Forest and the clustering model are both built; the dashboard's compare page shows where they differ.
 - **Study defaults in `ml/settings.py`** (comparable contracts, budget bands, share flagged, smallest entity for repeated winner). Claude chose them as defaults and listed the reasons in `ml/README.md`; the team has not confirmed them.
 - **Whether to start the full document request scrape.**
 
-When one is decided, move it out of this list into the relevant README. Decisions already made for the pipeline (2024 only, scrape Public Bidding civil works only) are in `pipeline/README.md`.
+When one is decided, move it out of this list into the relevant README. Decided: Isolation Forest is the primary model, clustering kept for comparison (`ml/README.md`). Decisions already made for the pipeline (2024 only, scrape Public Bidding civil works only) are in `pipeline/README.md`.
 
 ## Sub-agents
 

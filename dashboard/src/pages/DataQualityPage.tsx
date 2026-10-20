@@ -9,6 +9,7 @@ const EXCLUSIONS: [string, string][] = [
   ['malformed_rows', 'Wrong number of columns, so the row could not be read'],
   ['not_awarded', 'Civil works with no award recorded'],
   ['award_cancelled', 'Award was cancelled'],
+  ['awarded_before_study_period', 'Award dated before the study period'],
   ['no_procuring_entity', 'No procuring entity named'],
   ['extra_line_item_rows', 'Further line items of an award already counted'],
   ['repeated_in_another_file', 'Award already seen in another file'],

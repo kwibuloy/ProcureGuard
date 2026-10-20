@@ -1,6 +1,7 @@
 import { CountUp } from '../components/CountUp';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { amountFacts } from '../amounts';
 import { useApi, withRun, type ContractDetail } from '../api';
 import { ContributionChart } from '../components/ContributionChart';
 import { Icon } from '../components/Icon';
@@ -38,8 +39,7 @@ function Detail({ contract }: { contract: ContractDetail }) {
   const run = useOverview().data?.run ?? null;
   const threshold = run?.flagThreshold ?? null;
   const percentile = percentileFromRank(contract.rank, contract.scoredContracts);
-  const ofBudget =
-    contract.amount !== null && contract.budget ? contract.amount / contract.budget : null;
+  const amounts = amountFacts(contract);
   const place = [contract.cityMunicipality, contract.province, contract.region]
     .filter(Boolean)
     .join(', ');
@@ -136,12 +136,13 @@ function Detail({ contract }: { contract: ContractDetail }) {
               </span>
             )}
           </Fact>
-          <Fact label="Approved budget">{formatPeso(contract.budget)}</Fact>
-          <Fact label="Contract amount">
+          <Fact label={amounts.budgetLabel}>
+            {formatPeso(contract.budget)}
+            {amounts.budgetNote && <span className="fact-sub">{amounts.budgetNote}</span>}
+          </Fact>
+          <Fact label={amounts.amountLabel}>
             {formatPeso(contract.amount)}
-            {ofBudget !== null && (
-              <span className="fact-sub">{formatPercent(ofBudget, 1)} of the approved budget</span>
-            )}
+            {amounts.amountNote && <span className="fact-sub">{amounts.amountNote}</span>}
           </Fact>
           <Fact label="Procurement mode">{contract.procurementMode ?? 'Not published'}</Fact>
           <Fact label="Document requests">
