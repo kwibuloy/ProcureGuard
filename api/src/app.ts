@@ -4,6 +4,7 @@ import {
   compareRuns,
   contractDetail,
   dataQuality,
+  places,
   exportContracts,
   findRun,
   INDICATORS,
@@ -22,6 +23,12 @@ const MAX_PAGE_SIZE = 100;
 const text = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim().slice(0, 200) : undefined;
 
+/** Place names joined with "|" (a map shape can stand for several spellings). */
+const names = (value: unknown) => {
+  const list = (text(value)?.split('|') ?? []).map((name) => name.trim()).filter(Boolean);
+  return list.length ? list.slice(0, 20) : undefined;
+};
+
 const positiveInt = (value: unknown, fallback: number) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
@@ -39,6 +46,8 @@ function contractFilters(query: Request['query']) {
   return {
     q: text(query.q),
     region: text(query.region),
+    provinces: names(query.province),
+    cities: names(query.city),
     entityType: text(query.entityType),
     entity: text(query.entity),
     awardee: text(query.awardee),
@@ -80,6 +89,7 @@ export function createApp(db: Db) {
         ...contractFilters(req.query),
         page: positiveInt(req.query.page, 1),
         pageSize: Math.min(positiveInt(req.query.pageSize, 25), MAX_PAGE_SIZE),
+        grouped: req.query.group === 'true',
       }),
     );
   });
@@ -118,6 +128,11 @@ export function createApp(db: Db) {
       return res.status(400).json({ error: 'Choose two different scoring runs' });
     }
     res.json({ a: runA, b: runB, ...(await compareRuns(db, a, b)) });
+  });
+
+  app.get('/api/places', async (req, res) => {
+    const run = await runFor(req);
+    res.json(run ? await places(db, run.id) : []);
   });
 
   app.get('/api/data-quality', async (_req, res) => {

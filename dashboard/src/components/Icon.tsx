@@ -20,6 +20,8 @@ const PATHS = {
   building:
     'M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M15 10h3a1 1 0 0 1 1 1v10M3 21h18M9 8h2M9 12h2M9 16h2',
   empty: 'M4 7l2-3h12l2 3M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M4 7h5l1 2h4l1-2h5',
+  sliders: 'M4 7h10m4 0h2M4 17h4m4 0h8M16 5v4M10 15v4',
+  map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14',
   // Indicators
   single_requester: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
   repeated_winner: 'M17 3l3 3-3 3M4 11V9a3 3 0 0 1 3-3h13M7 21l-3-3 3-3m13-2v2a3 3 0 0 1-3 3H4',

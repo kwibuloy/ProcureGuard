@@ -20,20 +20,29 @@ With no real data yet, load and score demonstration contracts from the repo root
 
 | Route                                             | Screen                                                                                     |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `/`                                               | Review queue: summary, score histogram, main reasons, filterable ranked table, CSV export  |
+| `/`                                               | Review queue: summary, score histogram, main reasons, map by place, filterable ranked table, CSV export |
 | `/contracts/:id`                                  | Side panel over the queue explaining one contract's score; prints as a one-page summary    |
 | `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won                                |
 | `/compare`                                        | Two models side by side: shared flags, rank agreement, scatter plot, largest disagreements |
 | `/data`                                           | Data quality: rows read and left out, field completeness, impossible values                |
 | `/method`                                         | What a flag means, the three indicators, and the system's limits                           |
 
-Filters, sort order and page live in the URL, so a filtered view can be shared as a link. The scoring run on screen is chosen in the header and lasts for the browser session.
+Filters, sort order and page live in the URL, so a filtered view can be shared as a link. View settings (grouping lots by notice, hidden columns, compact rows) also live in the URL and are saved in the browser; a link that carries settings wins over the saved ones. The scoring run on screen is chosen in the header and lasts for the browser session.
 
 ## Working the queue
 
 - Select a histogram bar or a main-reason bar to filter the list; active filters appear as removable chips.
 - `J` and `K` (or the arrow keys) move through the list, `Enter` opens a contract, `Esc` closes it, `/` jumps to search. With a contract open, `J` and `K` go to the next and previous one.
 - "Mark as reviewed" is saved in the browser only (`localStorage`). The API is read-only, so nothing about a review reaches the server or other reviewers.
+
+## Map
+
+The map card shows flagged contracts by where the procuring entity is based (PhilGEPS publishes no project sites): regions, then a region's provinces, then a province's cities and municipalities. Choosing a place filters the list.
+
+- Boundaries are in `public/maps/`: PSGC (December 2023) from [faeldon/philippines-json-maps](https://github.com/faeldon/philippines-json-maps), MIT (`public/maps/LICENSE.txt`), low resolution. About 950 KB in all, but a viewer loads only the country file (137 KB) when the card scrolls into view, then about 10 KB per region or province opened.
+- `src/map/places.ts` matches PhilGEPS names to PSGC codes. On the 2024 data, 99.9% of contracts match a province and about 90% a city. Most of the rest are highly urbanized cities (Iloilo City, Cebu City and others), which the boundary files do not draw; they are listed by name beside their province.
+- The Negros Island Region (2024) does not exist in the 2023 boundaries; its provinces are drawn in their former regions.
+- After replacing the boundary files, rebuild the name index: `node scripts/build-map-index.mjs`.
 
 ## Design rules
 

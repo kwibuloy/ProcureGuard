@@ -13,9 +13,23 @@ export const SORTS = {
 } as const;
 export type Sort = keyof typeof SORTS;
 
+// The same orders on the grouped list's output columns.
+const GROUPED_SORTS: Record<Sort, string> = {
+  rank: 'rank ASC',
+  amount: 'amount DESC NULLS LAST, rank ASC',
+  recent: '"awardDate" DESC NULLS LAST, rank ASC',
+};
+
+// One key per bid notice; an award made without a notice is its own.
+const NOTICE_KEY = `COALESCE(c.source_series || ':' || c.bid_reference_no, 'award:' || c.id)`;
+
 export interface ListFilters {
   q?: string;
   region?: string;
+  /** Exact province names; several when one map shape stands for more than one spelling. */
+  provinces?: string[];
+  /** Exact city/municipality names, as for provinces. */
+  cities?: string[];
   entityType?: string;
   entity?: string;
   awardee?: string;
@@ -26,6 +40,8 @@ export interface ListFilters {
   sort: Sort;
   page: number;
   pageSize: number;
+  /** One row per bid notice instead of one per contract. */
+  grouped: boolean;
 }
 
 const HISTOGRAM_BINS = 20;
@@ -138,10 +154,44 @@ export async function overview(db: Db, runId: number) {
   };
 }
 
-type ContractFilters = Omit<ListFilters, 'sort' | 'page' | 'pageSize'>;
+type ContractFilters = Omit<ListFilters, 'sort' | 'page' | 'pageSize' | 'grouped'>;
+
+/** A search word, and whether it matched nothing exactly and so matches close spellings. */
+export interface SearchTerm {
+  word: string;
+  fuzzy: boolean;
+}
+
+const MAX_SEARCH_WORDS = 8;
+
+/** A LIKE pattern matching the word anywhere, with LIKE's wildcards taken literally. */
+const likePattern = (word: string) => `%${word.replace(/[\\%_]/g, '\\$&')}%`;
+
+/** The lower-case words of a search, without repeats. */
+export const searchWords = (q: string | undefined) =>
+  [...new Set((q ?? '').toLowerCase().split(/\s+/).filter(Boolean))].slice(0, MAX_SEARCH_WORDS);
+
+/**
+ * Decide per word whether to match exactly or allow typos. A word that appears
+ * somewhere in the data matches exactly, because typo matching on it adds noise
+ * ("imus" would also find "various improvement"). A word found nowhere ("imuz")
+ * falls back to close spellings through the trigram index.
+ */
+export async function resolveSearch(db: Db, q: string | undefined): Promise<SearchTerm[]> {
+  const words = searchWords(q);
+  if (!words.length) return [];
+  const { rows } = await db.query(
+    `SELECT t.i::int AS i,
+            NOT EXISTS (SELECT 1 FROM contracts WHERE search_text LIKE t.pattern) AS fuzzy
+     FROM unnest($1::text[]) WITH ORDINALITY AS t(pattern, i)`,
+    [words.map(likePattern)],
+  );
+  const fuzzy = new Map<number, boolean>(rows.map((row) => [row.i, Boolean(row.fuzzy)]));
+  return words.map((word, index) => ({ word, fuzzy: fuzzy.get(index + 1) ?? false }));
+}
 
 /** WHERE clause and parameters shared by the paged list and the CSV export. */
-function contractFilter(runId: number, filters: ContractFilters) {
+function contractFilter(runId: number, filters: ContractFilters, terms: SearchTerm[] = []) {
   const where = ['s.run_id = $1'];
   const params: unknown[] = [runId];
   const add = (clause: string, value: unknown) => {
@@ -149,13 +199,14 @@ function contractFilter(runId: number, filters: ContractFilters) {
     where.push(clause.replaceAll('?', `$${params.length}`));
   };
 
-  if (filters.q) {
-    add(
-      '(c.title ILIKE ? OR c.procuring_entity_raw ILIKE ? OR c.awardee_raw ILIKE ? OR c.award_reference_no ILIKE ?)',
-      `%${filters.q.replace(/[\\%_]/g, '\\$&')}%`,
-    );
+  // Every word must match somewhere: title, entity, awardee, references, city or province.
+  for (const term of terms) {
+    if (term.fuzzy) add('? <% c.search_text', term.word);
+    else add('c.search_text LIKE ?', likePattern(term.word));
   }
   if (filters.region) add('c.region = ?', filters.region);
+  if (filters.provinces?.length) add('c.province = ANY(?)', filters.provinces);
+  if (filters.cities?.length) add('c.city_municipality = ANY(?)', filters.cities);
   if (filters.entityType) add('c.entity_type_group = ?', filters.entityType);
   if (filters.entity) add('c.procuring_entity = ?', filters.entity);
   if (filters.awardee) add('c.awardee = ?', filters.awardee);
@@ -173,22 +224,49 @@ const LIST_FROM = `
   JOIN contracts c ON c.id = s.contract_id
   LEFT JOIN (${REASONS}) r ON r.contract_id = c.id`;
 
+/**
+ * One row per contract, or when `grouped`, one row per bid notice: a notice
+ * awarded in lots then shows its highest-ranked matching award, with how many
+ * awards the notice has and their total, so ten lots do not fill ten rows.
+ */
 export async function listContracts(db: Db, runId: number, filters: ListFilters) {
-  const { where, params } = contractFilter(runId, filters);
+  const terms = await resolveSearch(db, filters.q);
+  const { where, params } = contractFilter(runId, filters, terms);
   params.push(filters.pageSize, (filters.page - 1) * filters.pageSize);
   const { rows } = await db.query(
-    `SELECT c.id::int AS id, s.score_rank AS rank, s.risk_score AS score,
-            s.is_flagged AS flagged, c.title, c.award_reference_no AS "awardReference",
-            c.procuring_entity AS entity, c.procuring_entity_raw AS "entityName", c.region,
-            c.awardee, c.awardee_raw AS "awardeeName",
-            c.contract_amount::float8 AS amount, c.approved_budget::float8 AS budget,
-            c.award_date::text AS "awardDate", r.main_reason AS "mainReason",
-            r.contributions,
-            count(*) OVER ()::int AS total
-     ${LIST_FROM}
-     WHERE ${where}
-     ORDER BY ${SORTS[filters.sort]}
-     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    `SELECT page.*,
+            COALESCE(n.awards, 1)::int AS "noticeAwards",
+            COALESCE(n.amount, page.amount)::float8 AS "noticeAmount"
+     FROM (
+       SELECT *, count(*) OVER ()::int AS total,
+              ${filters.grouped ? 'sum(matched_in_notice) OVER ()' : 'count(*) OVER ()'}::int
+                AS "matchedContracts"
+       FROM (
+         SELECT c.id::int AS id, s.score_rank AS rank, s.risk_score AS score,
+                s.is_flagged AS flagged, c.title, c.award_reference_no AS "awardReference",
+                c.procuring_entity AS entity, c.procuring_entity_raw AS "entityName", c.region,
+                c.awardee, c.awardee_raw AS "awardeeName",
+                c.contract_amount::float8 AS amount, c.approved_budget::float8 AS budget,
+                c.item_budget::float8 AS "itemBudget",
+                c.award_date::text AS "awardDate", r.main_reason AS "mainReason",
+                r.contributions,
+                c.source_series AS notice_series, c.bid_reference_no AS notice_reference,
+                row_number() OVER (PARTITION BY ${NOTICE_KEY} ORDER BY s.score_rank) AS lot_order,
+                count(*) OVER (PARTITION BY ${NOTICE_KEY}) AS matched_in_notice
+         ${LIST_FROM}
+         WHERE ${where}
+       ) grouped
+       WHERE ${filters.grouped ? 'lot_order = 1' : 'TRUE'}
+       ORDER BY ${GROUPED_SORTS[filters.sort]}
+       LIMIT $${params.length - 1} OFFSET $${params.length}
+     ) page
+     -- How many awards each row's notice has, for the rows on this page only.
+     LEFT JOIN LATERAL (
+       SELECT count(*) AS awards, sum(x.contract_amount) AS amount
+       FROM contracts x
+       WHERE x.source_series = page.notice_series AND x.bid_reference_no = page.notice_reference
+     ) n ON page.notice_reference IS NOT NULL
+     ORDER BY ${GROUPED_SORTS[filters.sort]}`,
     params,
   );
   // The figures behind each indicator, for the rows on this page only.
@@ -200,6 +278,17 @@ export async function listContracts(db: Db, runId: number, filters: ListFilters)
         [runId, ids],
       )
     : { rows: [] };
+  // Nothing flagged matches: say how many screened contracts do, so the reader
+  // can widen the list instead of concluding the search found nothing.
+  let screenedMatches: number | null = null;
+  if (!rows.length && filters.flaggedOnly && filters.page === 1) {
+    const wider = contractFilter(runId, { ...filters, flaggedOnly: false }, terms);
+    const { rows: counted } = await db.query(
+      `SELECT count(*)::int AS n ${LIST_FROM} WHERE ${wider.where}`,
+      wider.params,
+    );
+    screenedMatches = (counted[0]?.n as number | undefined) ?? 0;
+  }
   const byContract = new Map<number, Map<string, unknown>>();
   for (const { id, ...result } of details.rows) {
     if (!byContract.has(id)) byContract.set(id, new Map());
@@ -207,17 +296,31 @@ export async function listContracts(db: Db, runId: number, filters: ListFilters)
   }
   return {
     total: (rows[0]?.total as number | undefined) ?? 0,
+    matchedContracts: (rows[0]?.matchedContracts as number | undefined) ?? 0,
+    screenedMatches,
+    // Words with no exact match anywhere, matched by close spelling instead.
+    closeMatches: terms.filter((term) => term.fuzzy).map((term) => term.word),
     page: filters.page,
     pageSize: filters.pageSize,
-    items: rows.map(({ total: _total, ...item }) => {
-      const found = byContract.get(item.id);
-      return {
-        ...item,
-        indicators: found
-          ? INDICATORS.filter((name) => found.has(name)).map((name) => found.get(name))
-          : [],
-      };
-    }),
+    items: rows.map(
+      ({
+        total: _total,
+        matchedContracts: _matched,
+        lot_order: _order,
+        matched_in_notice: _inNotice,
+        notice_series: _series,
+        notice_reference: _reference,
+        ...item
+      }) => {
+        const found = byContract.get(item.id);
+        return {
+          ...item,
+          indicators: found
+            ? INDICATORS.filter((name) => found.has(name)).map((name) => found.get(name))
+            : [],
+        };
+      },
+    ),
   };
 }
 
@@ -227,7 +330,7 @@ export async function exportContracts(
   runId: number,
   filters: ContractFilters & { sort: Sort },
 ) {
-  const { where, params } = contractFilter(runId, filters);
+  const { where, params } = contractFilter(runId, filters, await resolveSearch(db, filters.q));
   const { rows } = await db.query(
     `SELECT s.score_rank AS rank, round((s.risk_score * 100)::numeric, 1)::float8 AS score,
             s.is_flagged AS flagged, r.main_reason AS main_reason,
@@ -420,6 +523,25 @@ const QUALITY_FIELDS = [
   ['award_date', 'Award date', 'Timeline'],
   ['notice_to_proceed_date', 'Notice to proceed date', 'Timeline'],
 ] as const;
+
+/**
+ * Contracts and flagged contracts per place, as PhilGEPS names it (where the
+ * procuring entity is based). The dashboard matches the names to map shapes.
+ */
+export async function places(db: Db, runId: number) {
+  const { rows } = await db.query(
+    `SELECT c.region, c.province, c.city_municipality AS city,
+            count(*)::int AS contracts,
+            count(*) FILTER (WHERE s.is_flagged)::int AS flagged,
+            coalesce(sum(c.contract_amount) FILTER (WHERE s.is_flagged), 0)::float8
+              AS "flaggedValue"
+     FROM contract_scores s JOIN contracts c ON c.id = s.contract_id
+     WHERE s.run_id = $1
+     GROUP BY 1, 2, 3`,
+    [runId],
+  );
+  return rows;
+}
 
 export async function dataQuality(db: Db) {
   const [report, fields, checks, notices] = await Promise.all([
