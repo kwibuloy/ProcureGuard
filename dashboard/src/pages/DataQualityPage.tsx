@@ -1,7 +1,7 @@
 import { useApi, type DataQuality } from '../api';
 import { BarList } from '../components/BarList';
 import { Notice, PageHeader, Tile } from '../components/States';
-import { formatCount, formatDate, formatPercent } from '../format';
+import { formatCount, formatDate, formatPercent, wholeCount } from '../format';
 
 /** Rows left out on the way from published rows to contracts, in the order it happens. */
 const EXCLUSIONS: [string, string][] = [
@@ -81,6 +81,7 @@ export function DataQualityPage() {
         <Tile
           label="Contracts available for scoring"
           value={formatCount(data.contracts)}
+          count={{ to: data.contracts, format: wholeCount }}
           note={rowsRead ? `from ${formatCount(rowsRead)} published rows` : undefined}
         />
         <Tile
@@ -91,12 +92,17 @@ export function DataQualityPage() {
         <Tile
           label="Document request counts collected"
           value={formatPercent(requests.wanted ? requests.collected / requests.wanted : 0)}
+          count={{
+            to: requests.wanted ? requests.collected / requests.wanted : 0,
+            format: formatPercent,
+          }}
           note={`${formatCount(requests.collected)} of ${formatCount(requests.wanted)} public bidding contracts`}
           share={requests.wanted ? requests.collected / requests.wanted : 0}
         />
         <Tile
           label="Procured through public bidding"
           value={formatPercent(data.publicBidding / data.contracts)}
+          count={{ to: data.publicBidding / data.contracts, format: formatPercent }}
           note={`${formatCount(data.publicBidding)} contracts`}
           share={data.publicBidding / data.contracts}
         />

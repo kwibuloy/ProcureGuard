@@ -1,9 +1,10 @@
+import type { CSSProperties } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApi, type Comparison, type Run } from '../api';
 import { BarList } from '../components/BarList';
 import { ScatterPlot } from '../components/ScatterPlot';
 import { Notice, PageHeader, Tile } from '../components/States';
-import { formatCount, formatDate, formatPercent, toPoints } from '../format';
+import { formatCount, formatDate, formatPercent, toPoints, wholeCount } from '../format';
 import { useRuns } from '../run';
 
 /** The two most recent runs made by different models, newest first. */
@@ -12,6 +13,8 @@ function defaultPair(runs: Run[]): [number, number] | null {
   const second = runs.find((run) => run.modelName !== first?.modelName) ?? runs[1];
   return first && second ? [second.id, first.id] : null;
 }
+
+const twoDecimals = (value: number) => value.toFixed(2);
 
 function agreement(correlation: number | null): string {
   if (correlation === null) return 'Not enough contracts to tell';
@@ -110,22 +113,30 @@ export function ComparePage() {
             <Tile
               label="Flagged by both models"
               value={formatCount(data.flaggedByBoth)}
+              count={{ to: data.flaggedByBoth, format: wholeCount }}
               note={`${formatPercent(flaggedA ? data.flaggedByBoth / flaggedA : 0)} of ${data.a.modelName}’s flags`}
               share={flaggedA ? data.flaggedByBoth / flaggedA : 0}
             />
             <Tile
               label={`Only ${data.a.modelName}`}
               value={formatCount(data.onlyA)}
+              count={{ to: data.onlyA, format: wholeCount }}
               note="flagged by model A alone"
             />
             <Tile
               label={`Only ${data.b.modelName}`}
               value={formatCount(data.onlyB)}
+              count={{ to: data.onlyB, format: wholeCount }}
               note="flagged by model B alone"
             />
             <Tile
               label="Rank agreement"
               value={data.rankCorrelation === null ? 'n/a' : data.rankCorrelation.toFixed(2)}
+              count={
+                data.rankCorrelation === null
+                  ? undefined
+                  : { to: data.rankCorrelation, format: twoDecimals }
+              }
               note={`${agreement(data.rankCorrelation)} (Spearman, −1 to 1)`}
               share={Math.max(0, data.rankCorrelation ?? 0)}
             />
@@ -216,8 +227,8 @@ export function ComparePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.disagreements.map((row) => (
-                      <tr key={row.id}>
+                    {data.disagreements.map((row, index) => (
+                      <tr key={row.id} style={{ '--i': index } as CSSProperties}>
                         <td className="col-contract">
                           <Link to={`/contracts/${row.id}`} className="row-link">
                             {row.title}

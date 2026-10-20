@@ -12,7 +12,14 @@ import { BarList } from '../components/BarList';
 import { ContractTable } from '../components/ContractTable';
 import { Icon } from '../components/Icon';
 import { Notice, SkeletonRows, Tile } from '../components/States';
-import { formatCount, formatDate, formatPercent, formatPesoCompact, plural } from '../format';
+import {
+  formatCount,
+  formatDate,
+  formatPercent,
+  formatPesoCompact,
+  plural,
+  wholeCount,
+} from '../format';
 import { profileLink } from '../links';
 import { useOverview } from '../overview';
 
@@ -106,18 +113,29 @@ export function ProfilePage() {
         <Tile
           label={`Contracts ${words.verb}`}
           value={formatCount(data.contracts)}
+          count={{ to: data.contracts, format: wholeCount }}
           note="in this scoring run"
         />
         <Tile
           label="Flagged for review"
           value={formatCount(data.flagged)}
+          count={{ to: data.flagged, format: wholeCount }}
           note={`${formatPercent(data.contracts ? data.flagged / data.contracts : 0)} of its contracts`}
           share={data.contracts ? data.flagged / data.contracts : 0}
         />
-        <Tile label="Total contract value" value={formatPesoCompact(data.totalValue)} />
+        <Tile
+          label="Total contract value"
+          value={formatPesoCompact(data.totalValue)}
+          count={
+            data.totalValue === null
+              ? undefined
+              : { to: data.totalValue, format: formatPesoCompact }
+          }
+        />
         <Tile
           label={`Different ${words.counterparts}`}
           value={formatCount(data.counterparties)}
+          count={{ to: data.counterparties, format: wholeCount }}
           note={
             leader
               ? `largest holds ${formatPercent(leader.contracts / data.contracts)} of contracts`
