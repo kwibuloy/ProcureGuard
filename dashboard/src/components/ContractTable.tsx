@@ -1,8 +1,10 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
+import { budgetShare, noticeSummary } from '../amounts';
 import type { ContractRow } from '../api';
-import { formatDate, formatPeso, toPoints } from '../format';
+import { formatDate, formatPercent, formatPeso, toPoints } from '../format';
 import { profileLink } from '../links';
+import type { Column, ViewSettings } from '../view';
 import { Icon } from './Icon';
 import { ScoreMeter } from './ScoreMeter';
 import { WhyCell } from './WhyCell';
@@ -18,6 +20,8 @@ interface Props {
   reviewed?: ReadonlySet<number>;
   /** Hide a column when every row would say the same thing. */
   hide?: 'entity' | 'awardee';
+  /** The reader's view settings; the profile pages use the defaults. */
+  view?: ViewSettings;
   loading?: boolean;
 }
 
@@ -30,41 +34,62 @@ export function ContractTable({
   cursorId,
   reviewed,
   hide,
+  view,
   loading,
 }: Props) {
+  const shows = (column: Column) =>
+    column === 'share' ? Boolean(view && !view.hidden.has('share')) : !view?.hidden.has(column);
+  const grouped = view?.grouped ?? false;
   return (
-    <div className={`table-wrap ${loading ? 'is-loading' : ''}`}>
+    <div
+      className={['table-wrap', loading && 'is-loading', view?.compact && 'is-compact']
+        .filter(Boolean)
+        .join(' ')}
+    >
       <table className="queue-table">
         <thead>
           <tr>
-            <th scope="col" className="col-rank">
-              Rank
-            </th>
+            {shows('rank') && (
+              <th scope="col" className="col-rank">
+                Rank
+              </th>
+            )}
             <th scope="col">Contract</th>
-            {hide !== 'entity' && (
+            {hide !== 'entity' && shows('entity') && (
               <th scope="col" className="col-entity">
                 Procuring entity
               </th>
             )}
-            {hide !== 'awardee' && (
+            {hide !== 'awardee' && shows('awardee') && (
               <th scope="col" className="col-awardee">
                 Awardee
               </th>
             )}
-            <th scope="col" className="col-amount">
-              Contract amount
-            </th>
+            {shows('amount') && (
+              <th scope="col" className="col-amount">
+                Contract amount
+              </th>
+            )}
+            {shows('share') && (
+              <th scope="col" className="col-share">
+                % of budget
+              </th>
+            )}
             <th scope="col" className="col-score">
               Score
             </th>
-            <th scope="col" className="col-reason">
-              Why
-            </th>
+            {shows('why') && (
+              <th scope="col" className="col-reason">
+                Why
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => {
             const isReviewed = reviewed?.has(row.id) ?? false;
+            const notice = grouped ? noticeSummary(row) : null;
+            const share = budgetShare(row, grouped);
             const classes = [
               row.id === openId && 'is-open',
               row.id === cursorId && 'is-cursor',
@@ -78,26 +103,29 @@ export function ContractTable({
                 data-row={row.id}
                 style={{ '--i': index } as CSSProperties}
               >
-                <td className="col-rank">
-                  {isReviewed ? (
-                    <span className="reviewed-mark" title="Marked as reviewed in this browser">
-                      <Icon name="check" size={14} />
-                      <span className="visually-hidden">Reviewed. Rank </span>
-                      {row.rank}
-                    </span>
-                  ) : (
-                    row.rank
-                  )}
-                </td>
+                {shows('rank') && (
+                  <td className="col-rank">
+                    {isReviewed ? (
+                      <span className="reviewed-mark" title="Marked as reviewed in this browser">
+                        <Icon name="check" size={14} />
+                        <span className="visually-hidden">Reviewed. Rank </span>
+                        {row.rank}
+                      </span>
+                    ) : (
+                      row.rank
+                    )}
+                  </td>
+                )}
                 <td className="col-contract">
                   <Link to={contractLink(row.id)} className="row-link">
                     {row.title}
                   </Link>
                   <span className="cell-sub">
                     {row.awardReference} · Awarded {formatDate(row.awardDate)}
+                    {notice && ` · ${notice.others}`}
                   </span>
                 </td>
-                {hide !== 'entity' && (
+                {hide !== 'entity' && shows('entity') && (
                   <td className="col-entity">
                     <Link to={profileLink('entity', row.entity)} className="cell-link">
                       {row.entityName}
@@ -105,23 +133,36 @@ export function ContractTable({
                     <span className="cell-sub">{row.region ?? 'Region not published'}</span>
                   </td>
                 )}
-                {hide !== 'awardee' && (
+                {hide !== 'awardee' && shows('awardee') && (
                   <td className="col-awardee">
                     <Link to={profileLink('awardee', row.awardee)} className="cell-link">
                       {row.awardeeName}
                     </Link>
                   </td>
                 )}
-                <td className="col-amount">{formatPeso(row.amount)}</td>
+                {shows('amount') && (
+                  <td className="col-amount">
+                    {formatPeso(row.amount)}
+                    {notice && <span className="cell-sub">{notice.total}</span>}
+                  </td>
+                )}
+                {shows('share') && (
+                  <td className="col-share">
+                    {share ? formatPercent(share.share, 1) : 'Not published'}
+                    {share?.basis && <span className="cell-sub">{share.basis}</span>}
+                  </td>
+                )}
                 <td className="col-score">
                   <span className="score-cell">
                     <span className="score-number">{toPoints(row.score)}</span>
                     <ScoreMeter score={row.score} threshold={threshold} />
                   </span>
                 </td>
-                <td className="col-reason">
-                  <WhyCell row={row} />
-                </td>
+                {shows('why') && (
+                  <td className="col-reason">
+                    <WhyCell row={row} />
+                  </td>
+                )}
               </tr>
             );
           })}

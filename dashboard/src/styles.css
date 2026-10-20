@@ -2469,6 +2469,369 @@ g.dots-both {
 
 /* Smaller screens */
 
+/* Review list view settings: the grouping switch and the View menu. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--wash-strong);
+  box-shadow: var(--shadow-inset);
+  transition: background 160ms;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  box-shadow: 0 1px 2px rgba(11, 11, 11, 0.3);
+  transition: transform 160ms var(--ease);
+}
+
+.switch input:checked + .switch-track {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(14px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu > summary {
+  list-style: none;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 14px;
+  width: 230px;
+  max-width: calc(100vw - 32px);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+}
+
+.menu-panel fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.menu-panel legend {
+  margin-bottom: 4px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.check.is-off {
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.map-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.col-share {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.queue-table th.col-share {
+  text-align: right;
+}
+
+.is-compact .queue-table td {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.is-compact .queue-table .cell-sub {
+  margin-top: 0;
+  font-size: 11px;
+}
+
+/* Map of flagged contracts by place. */
+.place-map {
+  display: grid;
+  gap: 14px;
+}
+
+.place-map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.map-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.map-crumbs button {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.map-crumbs button:disabled {
+  color: var(--ink-2);
+  text-decoration: none;
+  cursor: default;
+}
+
+.place-map-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.map-frame {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  /* Shapes are tapped, not dragged: no double-tap zoom delay on phones. */
+  touch-action: manipulation;
+}
+
+.map-skeleton {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 560px;
+  border-radius: var(--radius-small);
+}
+
+.map-shape {
+  stroke: var(--surface);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill 160ms;
+}
+
+/* The darkest shade is ink, so an ink outline would vanish: the focus colour marks the place. */
+.map-shape:hover,
+.map-shape:focus-visible,
+.map-shape.is-selected {
+  stroke: var(--focus);
+  stroke-width: 2;
+  outline: none;
+}
+
+.shade-0 {
+  fill: var(--wash-strong);
+}
+.shade-1 {
+  fill: color-mix(in srgb, var(--mark) 18%, var(--surface));
+}
+.shade-2 {
+  fill: color-mix(in srgb, var(--mark) 36%, var(--surface));
+}
+.shade-3 {
+  fill: color-mix(in srgb, var(--mark) 56%, var(--surface));
+}
+.shade-4 {
+  fill: color-mix(in srgb, var(--mark) 76%, var(--surface));
+}
+.shade-5 {
+  fill: var(--mark);
+}
+
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.map-key {
+  width: 18px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.map-key.shade-0 {
+  background: var(--wash-strong);
+}
+.map-key.shade-1 {
+  background: color-mix(in srgb, var(--mark) 18%, var(--surface));
+}
+.map-key.shade-2 {
+  background: color-mix(in srgb, var(--mark) 36%, var(--surface));
+}
+.map-key.shade-3 {
+  background: color-mix(in srgb, var(--mark) 56%, var(--surface));
+}
+.map-key.shade-4 {
+  background: color-mix(in srgb, var(--mark) 76%, var(--surface));
+}
+.map-key.shade-5 {
+  background: var(--mark);
+}
+
+.map-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.map-focus-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.map-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.map-table th,
+.map-table td {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.map-table thead th {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.map-table .col-num {
+  padding-left: 12px;
+  text-align: right;
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  text-decoration-color: var(--ink);
+}
+
+.map-undrawn ul {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.map-credit {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.search-note {
+  margin-top: 4px;
+}
+
 @media (max-width: 1180px) {
   .summary,
   .charts,
@@ -2580,12 +2943,42 @@ g.dots-both {
     font-size: 28px;
   }
 
-  .queue-head {
+  .queue-head,
+  .place-map-head {
     flex-direction: column;
   }
 
+  .place-map-body {
+    grid-template-columns: 1fr;
+  }
+
+  .map-svg {
+    max-height: 70vh;
+  }
+
+  /* Phones: Flagged / All on its own row, then the view controls and an icon-only export. */
   .queue-actions {
     flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .queue-actions .segmented {
+    order: -1;
+    width: 100%;
+  }
+
+  .queue-actions .segmented button {
+    flex: 1;
+  }
+
+  .button-export .button-label,
+  .wide-only {
+    display: none;
+  }
+
+  .button-export {
+    margin-left: auto;
+    padding: 0 12px;
   }
 
   .field,

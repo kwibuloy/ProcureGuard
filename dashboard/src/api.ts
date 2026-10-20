@@ -46,6 +46,12 @@ export interface ContractRow {
   amount: number | null;
   budget: number | null;
   awardDate: string | null;
+  /** Item budget of the line items this award covers; null when not published. */
+  itemBudget: number | null;
+  /** Awards in this row's bid notice. */
+  noticeAwards: number;
+  /** Total awarded across the notice's awards. */
+  noticeAmount: number | null;
   mainReason: Indicator | null;
   contributions: Partial<Record<Indicator, number>> | null;
   /** The figures behind each indicator, so the list can say why in words. */
@@ -53,7 +59,14 @@ export interface ContractRow {
 }
 
 export interface ContractList {
+  /** Rows: one per contract, or one per bid notice when grouped. */
   total: number;
+  /** Contracts behind those rows. */
+  matchedContracts: number;
+  /** When no flagged contract matches: how many screened contracts do. */
+  screenedMatches: number | null;
+  /** Search words with no exact match anywhere, matched by close spelling. */
+  closeMatches: string[];
   page: number;
   pageSize: number;
   items: ContractRow[];
@@ -173,6 +186,10 @@ export interface DataQuality {
 export interface ListQuery {
   q: string;
   region: string;
+  /** Province names joined with "|", set by the map. */
+  province?: string;
+  /** City/municipality names joined with "|", set by the map. */
+  city?: string;
   entityType: string;
   reason: string;
   /** Lower edge of a score band, as text ("0.6"), or empty. */
@@ -183,6 +200,8 @@ export interface ListQuery {
   page: number;
   entity?: string;
   awardee?: string;
+  /** One row per bid notice. */
+  grouped?: boolean;
 }
 
 export const PAGE_SIZE = 25;
@@ -192,6 +211,8 @@ function listParams(query: ListQuery, run: number | null): URLSearchParams {
   if (run) params.set('run', String(run));
   if (query.q) params.set('q', query.q);
   if (query.region) params.set('region', query.region);
+  if (query.province) params.set('province', query.province);
+  if (query.city) params.set('city', query.city);
   if (query.entityType) params.set('entityType', query.entityType);
   if (query.reason) params.set('reason', query.reason);
   if (query.scoreFrom) params.set('scoreFrom', query.scoreFrom);
@@ -207,6 +228,7 @@ export function contractsPath(query: ListQuery, run: number | null): string {
   const params = listParams(query, run);
   params.set('page', String(query.page));
   params.set('pageSize', String(PAGE_SIZE));
+  if (query.grouped) params.set('group', 'true');
   return `/api/contracts?${params}`;
 }
 
@@ -242,10 +264,16 @@ export function useApi<T>(path: string | null): Loaded<T> {
   useEffect(() => {
     if (!path) return;
     const controller = new AbortController();
+    // A response for a path the reader has already left must not overwrite the
+    // newer one: a slow earlier request can finish after a fast later one.
     get<T>(path, controller.signal)
-      .then((data) => setState({ data, error: null, path }))
+      .then((data) => {
+        if (!controller.signal.aborted) setState({ data, error: null, path });
+      })
       .catch((error: Error) => {
-        if (error.name !== 'AbortError') setState({ data: null, error: error.message, path });
+        if (error.name !== 'AbortError' && !controller.signal.aborted) {
+          setState({ data: null, error: error.message, path });
+        }
       });
     return () => controller.abort();
   }, [path, attempt]);

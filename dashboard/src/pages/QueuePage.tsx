@@ -11,11 +11,14 @@ import {
   type Overview,
   type Sort,
 } from '../api';
+import { listCount } from '../amounts';
 import { BarList } from '../components/BarList';
 import { CountUp } from '../components/CountUp';
 import { ContractTable } from '../components/ContractTable';
+import { PlaceMap } from '../components/PlaceMap';
 import { Icon } from '../components/Icon';
 import { ScoreHistogram } from '../components/ScoreHistogram';
+import { ViewMenu } from '../components/ViewMenu';
 import { Notice, SkeletonRows, Tile } from '../components/States';
 import {
   formatCount,
@@ -28,6 +31,14 @@ import {
 import { INDICATOR_ORDER, INDICATORS } from '../indicators';
 import { useOverview } from '../overview';
 import { useReviewed } from '../reviewed';
+import {
+  hasViewParams,
+  loadSavedView,
+  readView,
+  saveView,
+  viewParams,
+  type ViewSettings,
+} from '../view';
 
 const SORT_LABELS: Record<Sort, string> = {
   rank: 'Highest score first',
@@ -40,6 +51,8 @@ function readQuery(params: URLSearchParams): ListQuery {
   return {
     q: params.get('q') ?? '',
     region: params.get('region') ?? '',
+    province: params.get('province') ?? '',
+    city: params.get('city') ?? '',
     entityType: params.get('entityType') ?? '',
     reason: params.get('reason') ?? '',
     scoreFrom: params.get('scoreFrom') ?? '',
@@ -48,6 +61,7 @@ function readQuery(params: URLSearchParams): ListQuery {
     flaggedOnly: params.get('show') !== 'all',
     sort: sort === 'amount' || sort === 'recent' ? sort : 'rank',
     page: Math.max(1, Number(params.get('page')) || 1),
+    grouped: params.get('group') === '1',
   };
 }
 
@@ -145,6 +159,7 @@ export function QueuePage() {
   const run = overview.data?.run ?? null;
   const [params, setParams] = useSearchParams();
   const query = readQuery(params);
+  const view = readView(params);
   const list = useApi<ContractList>(run ? contractsPath(query, run.id) : null);
   const openId = Number(useMatch('/contracts/:id')?.params.id) || null;
   const search = params.toString();
@@ -161,6 +176,19 @@ export function QueuePage() {
     }
     if (!('page' in changes)) next.delete('page');
     setParams(next, { replace: true });
+  };
+
+  // A link without view settings opens in this browser's saved view.
+  useEffect(() => {
+    if (hasViewParams(params)) return;
+    const saved = loadSavedView();
+    if (saved) update({ ...saved, page: params.get('page') ?? '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setView = (next: ViewSettings) => {
+    saveView(next);
+    update(viewParams(next));
   };
 
   // Typing filters the queue after a short pause, not on every keystroke.
@@ -237,6 +265,13 @@ export function QueuePage() {
   const chips: { label: string; clear: Record<string, string> }[] = [];
   if (query.q) chips.push({ label: `“${query.q}”`, clear: { q: '' } });
   if (query.region) chips.push({ label: query.region, clear: { region: '' } });
+  // A map shape can stand for several spellings; the chip names the first.
+  if (query.province && !query.city) {
+    chips.push({ label: query.province.split('|')[0]!, clear: { province: '' } });
+  }
+  if (query.city) {
+    chips.push({ label: query.city.split('|')[0]!, clear: { city: '', province: '' } });
+  }
   if (query.entityType) chips.push({ label: query.entityType, clear: { entityType: '' } });
   if (query.reason) {
     const label = INDICATORS[query.reason as Indicator]?.label ?? query.reason;
@@ -246,7 +281,16 @@ export function QueuePage() {
 
   const clearAll = () => {
     setText('');
-    update({ q: '', region: '', entityType: '', reason: '', scoreFrom: '', scoreTo: '' });
+    update({
+      q: '',
+      region: '',
+      province: '',
+      city: '',
+      entityType: '',
+      reason: '',
+      scoreFrom: '',
+      scoreTo: '',
+    });
   };
 
   return (
@@ -303,20 +347,51 @@ export function QueuePage() {
         </div>
       </section>
 
+      <PlaceMap
+        run={run.id}
+        onFilter={(place) => {
+          update({ region: place.region, province: place.province, city: place.city });
+        }}
+      />
+
       <section className="card queue" aria-labelledby="queue-title">
         <div className="queue-head">
           <div>
             <h2 id="queue-title">Contracts to review</h2>
             <p className="card-note" aria-live="polite">
               {list.data
-                ? `${plural(list.data.total, 'contract')}${chips.length ? ' match the filters' : ''}`
+                ? `${listCount(list.data.total, list.data.matchedContracts)}${chips.length ? ' match the filters' : ''}`
                 : 'Loading contracts'}
             </p>
+            {list.data && list.data.closeMatches.length > 0 && (
+              <p className="card-note search-note">
+                No exact match for {list.data.closeMatches.map((word) => `“${word}”`).join(', ')};
+                showing close spellings.
+              </p>
+            )}
           </div>
           <div className="queue-actions">
-            <a className="button button-outline" href={exportPath(query, run.id)} download>
+            <label className="switch">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={view.grouped}
+                onChange={(event) => setView({ ...view, grouped: event.target.checked })}
+              />
+              <span className="switch-track" aria-hidden="true" />
+              <span>
+                Group <span className="wide-only">lots </span>by notice
+              </span>
+            </label>
+            <ViewMenu view={view} onChange={setView} />
+            <a
+              className="button button-outline button-export"
+              href={exportPath(query, run.id)}
+              download
+              aria-label="Export CSV"
+            >
               <Icon name="download" />
-              Export CSV
+              <span className="button-label">Export CSV</span>
             </a>
             <div className="segmented" role="group" aria-label="Which contracts to show">
               <button
@@ -344,7 +419,8 @@ export function QueuePage() {
             <input
               ref={searchBox}
               type="search"
-              placeholder="Search title, entity, awardee or reference"
+              placeholder="Search project, place or name"
+              title="Search by project title, city or province, procuring entity, awardee, or reference number"
               value={text}
               onChange={(event) => setText(event.target.value)}
             />
@@ -438,14 +514,25 @@ export function QueuePage() {
         ) : !rows ? (
           <SkeletonRows />
         ) : rows.length === 0 ? (
-          <Notice
-            title="No contracts match"
-            action={chips.length ? { label: 'Clear filters', onClick: clearAll } : undefined}
-          >
-            {query.flaggedOnly
-              ? 'No flagged contract matches these filters. Showing all screened contracts may find it.'
-              : 'Nothing in this scoring run matches these filters.'}
-          </Notice>
+          query.flaggedOnly && list.data?.screenedMatches ? (
+            <Notice
+              title="No flagged contract matches"
+              action={{ label: 'Show them', onClick: () => update({ show: 'all' }) }}
+            >
+              {`${plural(list.data.screenedMatches, 'screened contract')} ${
+                list.data.screenedMatches === 1 ? 'matches' : 'match'
+              } these filters but ${list.data.screenedMatches === 1 ? 'is' : 'are'} not flagged.`}
+            </Notice>
+          ) : (
+            <Notice
+              title="No contracts match"
+              action={chips.length ? { label: 'Clear filters', onClick: clearAll } : undefined}
+            >
+              {query.flaggedOnly
+                ? 'No flagged contract matches these filters, and no screened contract does either.'
+                : 'Nothing in this scoring run matches these filters.'}
+            </Notice>
+          )
         ) : (
           <>
             <ContractTable
@@ -455,6 +542,7 @@ export function QueuePage() {
               openId={openId}
               cursorId={cursor}
               reviewed={reviewed}
+              view={view}
               loading={list.loading}
             />
             <div className="queue-foot">

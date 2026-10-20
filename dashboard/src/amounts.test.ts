@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amountFacts } from './amounts';
+import { amountFacts, budgetShare, listCount, noticeSummary } from './amounts';
 
 describe('amountFacts', () => {
   it('keeps plain labels for a notice with one award', () => {
@@ -36,5 +36,51 @@ describe('amountFacts', () => {
     });
 
     expect(facts.amountNote).toBe('25.0% of the whole notice’s budget');
+  });
+});
+
+describe('noticeSummary', () => {
+  it('says how many other awards a notice row stands for and their total', () => {
+    expect(noticeSummary({ noticeAwards: 10, noticeAmount: 24_962_081 })).toEqual({
+      others: '+9 more awards in this notice',
+      total: expect.stringMatching(/whole notice$/),
+    });
+    expect(noticeSummary({ noticeAwards: 1, noticeAmount: 900_000 })).toBeNull();
+  });
+});
+
+describe('listCount', () => {
+  it('names the notices only when lots were grouped', () => {
+    expect(listCount(4_200, 4_511)).toBe('4,511 contracts in 4,200 bid notices');
+    expect(listCount(12, 12)).toBe('12 contracts');
+  });
+});
+
+describe('budgetShare', () => {
+  const lot = {
+    amount: 2_495_466,
+    budget: 24_997_404,
+    itemBudget: 2_499_947,
+    noticeAwards: 10,
+    noticeAmount: 24_962_081,
+  };
+
+  it('compares a lot with its own budget, and a grouped notice as a whole', () => {
+    expect(budgetShare(lot, false)).toEqual({
+      share: 2_495_466 / 2_499_947,
+      basis: 'of lot budget',
+    });
+    expect(budgetShare(lot, true)).toEqual({
+      share: 24_962_081 / 24_997_404,
+      basis: 'notice total',
+    });
+  });
+
+  it('uses the approved budget for a single award, and says when it is the whole notice', () => {
+    expect(budgetShare({ ...lot, noticeAwards: 1 }, false)).toEqual({
+      share: 2_495_466 / 24_997_404,
+      basis: null,
+    });
+    expect(budgetShare({ ...lot, itemBudget: null }, false)?.basis).toBe('of whole notice');
   });
 });
