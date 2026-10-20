@@ -41,3 +41,11 @@ npm run typecheck
 Request values only ever reach SQL as parameters. Sort order, the main-reason filter and the profile kind are chosen from fixed lists; a value outside the list is ignored. The CSV export prefixes any cell that starts with `=`, `+`, `-` or `@`, so published names cannot run as spreadsheet formulas.
 
 The end-to-end test in `tests/e2e/` starts this API against a real test database.
+
+## Deploy (Vercel)
+
+`vercel.json` at the repo root deploys this API and the dashboard as one Vercel project: `/api/*` goes to this service, everything else to the dashboard. The service runs `src/server.ts`, which exports the app; it only opens a port when `VERCEL` is not set.
+
+Vercel cannot reach the Docker database. Set `DATABASE_URL` in the Vercel project settings to a hosted PostgreSQL that holds the same schema and data; when it is set, it replaces the `POSTGRES_*` variables.
+
+`vercel dev` does not work for this service yet: Vercel's local Node dev server cannot resolve the `./app.js` imports to `app.ts` files. Deployed builds compile to `.js` first and are unaffected. Develop locally with `npm run dev` here and in `dashboard/`.
