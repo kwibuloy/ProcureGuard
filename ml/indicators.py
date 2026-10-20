@@ -38,10 +38,26 @@ def single_requester(contracts: pd.DataFrame, settings: Settings) -> pd.DataFram
     return pd.DataFrame({"value": requests, "context": context}, index=contracts.index)
 
 
+def notice_key(contracts: pd.DataFrame) -> pd.Series:
+    """One key per bid notice; an award made without a notice is its own key."""
+    if "bid_reference_no" not in contracts:
+        return contracts["id"].astype(str)
+    bid = contracts["bid_reference_no"]
+    series = contracts.get("source_series", pd.Series("", index=contracts.index))
+    return (series.astype(str) + ":" + bid.astype(str)).where(
+        bid.notna(), "award:" + contracts["id"].astype(str)
+    )
+
+
 def repeated_winner(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame:
-    """Share of a procuring entity's awards that went to this contract's awardee."""
-    entity_awards = contracts.groupby("procuring_entity")["id"].transform("count")
-    wins = contracts.groupby(["procuring_entity", "awardee"])["id"].transform("count")
+    """Share of a procuring entity's notices that were awarded to this contract's awardee.
+
+    Counted by notice, not by award record: a notice awarded in several lots, or
+    posted with more than one award notice, is one win.
+    """
+    notices = contracts.assign(notice=notice_key(contracts))
+    entity_awards = notices.groupby("procuring_entity")["notice"].transform("nunique")
+    wins = notices.groupby(["procuring_entity", "awardee"])["notice"].transform("nunique")
     enough = entity_awards >= settings.min_entity_awards
     share = (wins / entity_awards).where(enough)
     context = [
@@ -49,7 +65,7 @@ def repeated_winner(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
         if has_enough
         else {
             "entity_awards": int(total),
-            WHY_MISSING: f"the entity awarded fewer than {settings.min_entity_awards} contracts",
+            WHY_MISSING: f"the entity awarded fewer than {settings.min_entity_awards} bid notices",
         }
         for won, total, has_enough in zip(wins, entity_awards, enough, strict=True)
     ]
@@ -73,10 +89,17 @@ def price_deviation(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
     budget. The value is how far that share sits from the comparable median:
     0.02 is two percent above it, -0.30 is thirty percent below.
     """
-    ratio = contracts["notice_awarded_total"].astype(float) / contracts["approved_budget"].astype(
-        float
-    )
+    approved = contracts["approved_budget"].astype(float)
+    lines_budget = contracts.get("awarded_lines_budget", pd.Series(np.nan, index=contracts.index))
+    lines_budget = lines_budget.astype(float)
+    partial = lines_budget.notna() & (lines_budget < approved * 0.995)
+    budget = lines_budget.where(partial, approved)
+    ratio = contracts["notice_awarded_total"].astype(float) / budget
     ratio = ratio.where(np.isfinite(ratio) & (ratio > 0))
+    repeated = contracts.get("repeated_line_award", pd.Series(False, index=contracts.index))
+    repeated = repeated.fillna(False).astype(bool)
+    implausible = ratio < settings.min_plausible_price_ratio
+    ratio = ratio.where(~repeated & ~implausible)
     frame = pd.DataFrame(
         {
             "ratio": ratio,
@@ -112,8 +135,26 @@ def price_deviation(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
 
     deviation = ratio / median - 1
     context = []
-    for own, mid, size, label in zip(ratio, median, count, basis, strict=True):
-        if pd.isna(own) or pd.isna(mid):
+    awards = contracts.get("notice_award_count", pd.Series(1, index=contracts.index)).fillna(1)
+    for own, mid, size, label, is_repeated, is_implausible, is_partial, award_count in zip(
+        ratio, median, count, basis, repeated, implausible, partial, awards, strict=True
+    ):
+        if is_implausible and not is_repeated:
+            context.append(
+                {
+                    WHY_MISSING: "the awarded amount is under"
+                    f" {settings.min_plausible_price_ratio:.0%} of the approved budget, which"
+                    " is more likely a data entry error than a price"
+                }
+            )
+        elif is_repeated:
+            context.append(
+                {
+                    WHY_MISSING: "its notice has more than one award notice for the same line"
+                    " item, so the awarded total is not known"
+                }
+            )
+        elif pd.isna(own) or pd.isna(mid):
             context.append({WHY_MISSING: "the approved budget or contract amount is not published"})
         else:
             context.append(
@@ -122,6 +163,12 @@ def price_deviation(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
                     "comparable_median_ratio": float(mid),
                     "comparable_count": int(size),
                     "comparable_basis": label,
+                    "budget_compared": "budget of the awarded line items"
+                    if is_partial
+                    else "approved budget",
+                    # Above 1, the ratio is for the notice's awards together, not
+                    # this award alone.
+                    "notice_award_count": int(award_count),
                 }
             )
     return pd.DataFrame({"value": deviation, "context": context}, index=contracts.index)
@@ -142,7 +189,11 @@ def model_features(indicators: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """The numbers the model sees, one column per indicator.
 
     Document requests are inverted (1 request -> 1.0, 10 requests -> 0.1) so that
-    only few requests are extreme; a notice with many requests is ordinary. A
+    only few requests are extreme; a notice with many requests is ordinary. Price
+    counts only above the comparable median: awards cannot exceed the approved
+    budget, so nearly all room to differ is below it, and a low price is not one of
+    the red flags this study looks for (it is mostly partial awards and data entry
+    errors). The stored indicator value keeps its sign. A
     missing value is replaced by the median of its column, the most typical value,
     so that it neither raises nor lowers the score much. The stored indicator
     value stays missing.
@@ -151,7 +202,7 @@ def model_features(indicators: dict[str, pd.DataFrame]) -> pd.DataFrame:
         {
             SINGLE_REQUESTER: 1.0 / indicators[SINGLE_REQUESTER]["value"].clip(lower=1),
             REPEATED_WINNER: indicators[REPEATED_WINNER]["value"],
-            PRICE_DEVIATION: indicators[PRICE_DEVIATION]["value"],
+            PRICE_DEVIATION: indicators[PRICE_DEVIATION]["value"].clip(lower=0),
         }
     ).astype(float)
     return features.fillna(features.median().fillna(0.0))

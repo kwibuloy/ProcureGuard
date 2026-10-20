@@ -47,6 +47,7 @@ Order for real data: `migrate`, `download`, `load`, `notices`, then score (`ml/R
 - **Study period.** PhilGEPS groups its files by when the notice was published. A notice published in late 2024 can carry an award dated 2025; it is in scope. The period is set by which files are downloaded (`YEARS`).
 - **Names.** Case, punctuation and common short forms (Corp., Inc., Const., &) are standardized so one organization is counted once. The published spelling is kept beside it.
 - **Lots.** One notice can be awarded in several lots that share one approved budget. Each lot is its own contract; `ml/` sums them when comparing price to budget.
+- **Line items.** `line_items` records the `Line Item No` values each award covers (legacy series; the 2.0 files have no line number). In 2024, 96 notices have more than one award notice for the same line item, always to the same awardee; `ml/` uses this to avoid adding them up. `load` fills `line_items` in for contracts stored before the column existed.
 
 ## Tests
 

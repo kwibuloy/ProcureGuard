@@ -54,7 +54,14 @@ export async function listRuns(db: Db) {
   return rows;
 }
 
-/** The requested run, or the latest one when none (or an unknown one) is requested. */
+// The model the dashboard opens on (team decision; see ml/README.md). The other
+// model stays in the database for comparison.
+export const PRIMARY_MODEL = 'Isolation Forest';
+
+/**
+ * The requested run, or when none (or an unknown one) is requested, the latest
+ * run of the primary model, falling back to the latest run of any model.
+ */
 export async function findRun(db: Db, runId?: number) {
   if (runId) {
     const { rows } = await db.query(`SELECT ${RUN_COLUMNS} FROM scoring_runs WHERE id = $1`, [
@@ -63,7 +70,8 @@ export async function findRun(db: Db, runId?: number) {
     if (rows[0]) return rows[0];
   }
   const { rows } = await db.query(
-    `SELECT ${RUN_COLUMNS} FROM scoring_runs ORDER BY id DESC LIMIT 1`,
+    `SELECT ${RUN_COLUMNS} FROM scoring_runs ORDER BY model_name = $1 DESC, id DESC LIMIT 1`,
+    [PRIMARY_MODEL],
   );
   return rows[0] ?? null;
 }
@@ -253,6 +261,13 @@ export async function contractDetail(db: Db, runId: number, contractId: number) 
             c.city_municipality AS "cityMunicipality", c.entity_type AS "entityType",
             c.procurement_mode AS "procurementMode", c.business_category AS "businessCategory",
             c.approved_budget::float8 AS budget, c.contract_amount::float8 AS amount,
+            c.item_budget::float8 AS "itemBudget",
+            -- Awards sharing this notice's approved budget (its lots).
+            CASE WHEN c.bid_reference_no IS NULL THEN 1 ELSE
+              (SELECT count(*)::int FROM contracts x
+               WHERE x.source_series = c.source_series
+                 AND x.bid_reference_no = c.bid_reference_no)
+            END AS "noticeAwards",
             c.published_date::text AS "publishedDate", c.closing_date::text AS "closingDate",
             c.award_date::text AS "awardDate",
             c.notice_to_proceed_date::text AS "noticeToProceedDate",
@@ -276,13 +291,15 @@ export async function contractDetail(db: Db, runId: number, contractId: number) 
        FROM contract_indicators WHERE run_id = $1 AND contract_id = $2`,
       [runId, contractId],
     ),
-    // How the other models scored the same contract.
+    // How each other model scored the same contract, in its latest run only.
     db.query(
-      `SELECT r.id::int AS "runId", r.model_name AS "modelName", s.risk_score AS score,
+      `SELECT DISTINCT ON (r.model_name)
+              r.id::int AS "runId", r.model_name AS "modelName", s.risk_score AS score,
               s.score_rank AS rank, s.is_flagged AS flagged
        FROM contract_scores s JOIN scoring_runs r ON r.id = s.run_id
-       WHERE s.contract_id = $2 AND s.run_id <> $1
-       ORDER BY r.id DESC LIMIT 5`,
+       WHERE s.contract_id = $2
+         AND r.model_name <> (SELECT model_name FROM scoring_runs WHERE id = $1)
+       ORDER BY r.model_name, r.id DESC`,
       [runId, contractId],
     ),
   ]);

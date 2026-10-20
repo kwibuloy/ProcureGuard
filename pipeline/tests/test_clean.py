@@ -153,3 +153,31 @@ def test_modernized_files_use_their_own_column_names():
     assert contract.approved_budget == Decimal("500000.00")
     assert contract.funding_source == "Internally Generated Funds"
     assert contract.award_date == date(2024, 3, 4)
+
+
+def test_line_items_each_award_covers_are_recorded(tmp_path):
+    header = HEADER + ",Line Item No,Item Budget"
+    path = tmp_path / "legacy_2024_Q1.csv"
+    lines = [
+        row() + ",1,400000.00",
+        row() + ",2,600000.00",
+        row() + ",2,600000.00",  # same line repeated
+        row(award="901") + ",NULL,NULL",
+        row(award="902") + ",1,400000.00",
+        row(award="902") + ",2,-1",  # placeholder budget
+    ]
+    path.write_text("\n".join([header, *lines]) + "\n", encoding="utf-8-sig")
+
+    contracts, _ = clean_files([path])
+
+    assert [c.line_items for c in contracts] == [["1", "2"], [], ["1", "2"]]
+    assert [c.item_budget for c in contracts] == [Decimal("1000000.00"), None, None]
+
+
+def test_award_dated_before_the_study_period_is_left_out(tmp_path):
+    path = write(tmp_path, "legacy_2024_Q1.csv", [row(award_date="09/11/2023"), row(award="901")])
+
+    contracts, stats = clean_files([path])
+
+    assert [c.award_reference_no for c in contracts] == ["901"]
+    assert stats["awarded_before_study_period"] == 1

@@ -27,7 +27,7 @@ export const INDICATORS: Record<Indicator, IndicatorInfo> = {
   repeated_winner: {
     label: 'Repeated winner',
     measures:
-      'The share of a procuring entity’s awards in the period that went to the same awardee.',
+      'The share of a procuring entity’s bid notices in the period that were awarded to the same awardee.',
     limit:
       'A high share can have ordinary causes, such as few qualified contractors in a remote area. It cannot show how the awardee came to win.',
   },
@@ -63,9 +63,9 @@ export function reason({ indicator, value, context }: IndicatorResult): string |
       const wins = number(context.wins);
       const awards = number(context.entity_awards);
       if (wins === undefined || awards === undefined) {
-        return `This awardee won ${formatPercent(value)} of this entity’s contracts.`;
+        return `This awardee won ${formatPercent(value)} of this entity’s bid notices.`;
       }
-      return `This awardee won ${formatCount(wins)} of this entity’s ${plural(awards, 'contract')} (${formatPercent(value)}).`;
+      return `This awardee won ${formatCount(wins)} of this entity’s ${plural(awards, 'bid notice')} (${formatPercent(value)}).`;
     }
     case 'price_deviation': {
       const ratio = number(context.amount_to_budget_ratio);
@@ -73,9 +73,25 @@ export function reason({ indicator, value, context }: IndicatorResult): string |
       if (ratio === undefined || median === undefined) {
         return `Priced ${formatPercent(Math.abs(value), 1)} ${value >= 0 ? 'above' : 'below'} comparable contracts.`;
       }
-      return `Awarded at ${formatPercent(ratio, 1)} of the approved budget; comparable contracts were at ${formatPercent(median, 1)}.`;
+      return `${awardedAt(context)} ${formatPercent(ratio, 1)} of the ${budgetCompared(context)}; comparable contracts were at ${formatPercent(median, 1)}.`;
     }
   }
+}
+
+/**
+ * What the price ratio is about. A notice awarded in several lots is compared as
+ * a whole, so the sentence must not read as this award's own share.
+ */
+function awardedAt(context: Record<string, unknown>): string {
+  const awards = number(context.notice_award_count);
+  return awards !== undefined && awards > 1
+    ? `This notice’s ${awards} awards together came to`
+    : 'Awarded at';
+}
+
+/** Which budget the price was compared with: the approved budget, or the lines awarded. */
+function budgetCompared(context: Record<string, unknown>): string {
+  return typeof context.budget_compared === 'string' ? context.budget_compared : 'approved budget';
 }
 
 /** One plain sentence stating the figures behind an indicator, for a reviewer to verify. */
@@ -96,9 +112,9 @@ export function explain({ indicator, value, context }: IndicatorResult): string 
       const wins = number(context.wins);
       const awards = number(context.entity_awards);
       if (wins === undefined || awards === undefined) {
-        return `This awardee received ${formatPercent(value)} of the entity’s awards.`;
+        return `This awardee won ${formatPercent(value)} of the entity’s bid notices.`;
       }
-      return `This awardee received ${wins} of the ${plural(awards, 'contract')} this entity awarded (${formatPercent(value)}).`;
+      return `This awardee won ${wins} of the ${plural(awards, 'bid notice')} this entity awarded (${formatPercent(value)}).`;
     }
     case 'price_deviation': {
       const ratio = number(context.amount_to_budget_ratio);
@@ -111,7 +127,7 @@ export function explain({ indicator, value, context }: IndicatorResult): string 
         typeof context.comparable_basis === 'string' ? ` (${context.comparable_basis})` : '';
       const comparables =
         count === undefined ? 'comparable contracts' : plural(count, 'comparable contract');
-      return `Awarded at ${formatPercent(ratio, 1)} of the approved budget. The median for ${comparables}${basis} was ${formatPercent(median, 1)}.`;
+      return `${awardedAt(context)} ${formatPercent(ratio, 1)} of the ${budgetCompared(context)}. The median for ${comparables}${basis} was ${formatPercent(median, 1)}.`;
     }
   }
 }

@@ -9,7 +9,7 @@ counted, because a filled-in price or date would create or hide a red flag.
 import re
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -80,6 +80,10 @@ class Contract:
     awardee_size: str | None
     line_item_count: int
     source_file: str
+    # "Line Item No" of each line the award covers (legacy series only).
+    line_items: list[str] = field(default_factory=list)
+    # Sum of those lines' "Item Budget"; None when any is missing or not positive.
+    item_budget: Decimal | None = None
 
 
 def text(value: str | None) -> str | None:
@@ -139,6 +143,8 @@ def build_contracts(
 ) -> None:
     """Add the awarded civil works contracts in `rows` to `contracts`, counting every outcome."""
     seen_here: set[tuple[str, str]] = set()
+    # Awards with a line whose item budget is missing; their total stays unknown.
+    budget_unknown: set[tuple[str, str]] = set()
     for row, malformed in rows:
         stats["rows_read"] += 1
         if malformed:
@@ -162,10 +168,27 @@ def build_contracts(
             stats["no_procuring_entity"] += 1
             continue
 
+        # Files are grouped by publish date, so a notice without one can carry an
+        # award from before the study period.
+        awarded = parse_date(get("Award Date"))
+        if awarded is not None and awarded.year < min(config.YEARS):
+            stats["awarded_before_study_period"] += 1
+            continue
+
         key = (series, award)
+        line = text(get("Line Item No"))
+        item_budget = parse_amount(get("Item Budget")) if line is not None else None
         if key in contracts:
             if key in seen_here:
-                contracts[key].line_item_count += 1
+                contract = contracts[key]
+                contract.line_item_count += 1
+                if line is not None and line not in contract.line_items:
+                    contract.line_items.append(line)
+                    if item_budget is None:
+                        budget_unknown.add(key)
+                        contract.item_budget = None
+                    elif key not in budget_unknown:
+                        contract.item_budget += item_budget
                 stats["extra_line_item_rows"] += 1
             else:
                 stats["repeated_in_another_file"] += 1
@@ -213,7 +236,11 @@ def build_contracts(
             awardee_size=text(get("Awardee Size")),
             line_item_count=1,
             source_file=source_file,
+            line_items=[] if line is None else [line],
+            item_budget=item_budget,
         )
+        if item_budget is None:
+            budget_unknown.add(key)
 
 
 def name_counts(contracts: Iterable[Contract]) -> dict[str, int]:

@@ -36,6 +36,16 @@ describe('choosing a scoring run', () => {
 
     expect(query.mock.calls.at(-1)![1]![0]).toBe(8);
   });
+
+  it('opens on the latest Isolation Forest run when no run is asked for', async () => {
+    const { db, query } = fakeDb();
+
+    await request(createApp(db)).get('/api/contracts');
+
+    const [sql, params] = callsMatching(query, 'FROM scoring_runs ORDER BY')[0]!;
+    expect(sql).toContain('model_name = $1 DESC, id DESC');
+    expect(params).toEqual(['Isolation Forest']);
+  });
 });
 
 describe('contract filters', () => {

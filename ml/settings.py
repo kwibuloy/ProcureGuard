@@ -21,6 +21,10 @@ class Settings:
     # Contracts are comparable when they share a region and a budget band. A group
     # smaller than this widens to the budget band alone, then to all contracts.
     min_comparable_contracts: int = 30
+    # A notice awarded below this share of its approved budget is not compared on
+    # price. Such amounts cluster at exactly 0.1% and 1%, the pattern of an amount
+    # published in thousands or with a misplaced decimal point, not of a real bid.
+    min_plausible_price_ratio: float = 0.2
     # Share of scored contracts shown as flagged for review.
     flag_share: float = 0.05
     random_seed: int = 2024

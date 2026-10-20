@@ -30,6 +30,7 @@ INTAKE_LABELS = {
     "civil_works_rows": "Civil works rows",
     "not_awarded": "Civil works rows with no award",
     "award_cancelled": "Rows of cancelled awards",
+    "awarded_before_study_period": "Rows of awards dated before the study period",
     "no_procuring_entity": "Rows with no procuring entity",
     "extra_line_item_rows": "Extra line-item rows of the same award",
     "repeated_in_another_file": "Rows of an award already seen in another file",

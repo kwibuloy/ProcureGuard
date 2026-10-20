@@ -3,7 +3,8 @@
 Run with: python -m pipeline.load
 
 Reads every CSV in data/raw/, keeps awarded civil works contracts, and inserts
-the ones not already stored. Running it again adds only new contracts. Ends with
+the ones not already stored. Running it again adds only new contracts (and fills in line items and
+item budgets for contracts stored before they were recorded). Ends with
 a data quality report; read it before scoring.
 """
 
@@ -23,7 +24,12 @@ COLUMNS = [field.name for field in fields(Contract)]
 INSERT = (
     f"INSERT INTO contracts ({', '.join(COLUMNS)})"
     f" VALUES ({', '.join(['%s'] * len(COLUMNS))})"
-    " ON CONFLICT (source_series, award_reference_no) DO NOTHING"
+    # An award already stored is left as it was, except that line items and item
+    # budgets recorded since it was first loaded are filled in.
+    " ON CONFLICT (source_series, award_reference_no) DO UPDATE"
+    " SET line_items = EXCLUDED.line_items, item_budget = EXCLUDED.item_budget"
+    " WHERE contracts.line_items = '{}' AND EXCLUDED.line_items <> '{}'"
+    " OR (contracts.item_budget IS NULL AND EXCLUDED.item_budget IS NOT NULL)"
 )
 DEMO_SOURCE = "DEMO"
 
