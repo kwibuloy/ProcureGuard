@@ -82,7 +82,7 @@ export function reason({ indicator, value, context }: IndicatorResult): string |
  * What the price ratio is about. A notice awarded in several lots is compared as
  * a whole, so the sentence must not read as this award's own share.
  */
-function awardedAt(context: Record<string, unknown>): string {
+function awardedAt(context: Record<string, number | string>): string {
   const awards = number(context.notice_award_count);
   return awards !== undefined && awards > 1
     ? `This notice’s ${awards} awards together came to`
@@ -90,7 +90,7 @@ function awardedAt(context: Record<string, unknown>): string {
 }
 
 /** Which budget the price was compared with: the approved budget, or the lines awarded. */
-function budgetCompared(context: Record<string, unknown>): string {
+function budgetCompared(context: Record<string, number | string>): string {
   return typeof context.budget_compared === 'string' ? context.budget_compared : 'approved budget';
 }
 
