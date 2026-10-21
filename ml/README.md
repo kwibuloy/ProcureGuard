@@ -46,7 +46,7 @@ A value that cannot be computed is stored as missing with the reason in `context
 
 ## The two models
 
-**Isolation Forest is the primary model** (team decision, October 2026): the dashboard opens on its latest run. The clustering model is still scored on every run for comparison, and the compare page shows where the two differ. Reasons: on the 2024 data the clustering model flagged 4,512 of 4,513 contracts mainly for price, so it reduced to one indicator, and its results depend on choices that are hard to defend (number of clusters, scaling, what counts as a large cluster). Isolation Forest spread its flags across indicators and has no setting that changes the ranking much.
+**Isolation Forest is the primary model** (team decision, October 2026): the dashboard opens on its latest run. The clustering model is still scored on every run for comparison; its runs can be chosen in the dashboard's run picker, and `GET /api/compare` reports where the two models differ (the dashboard's compare page was removed in October 2026). Reasons: on the 2024 data the clustering model flagged 4,512 of 4,513 contracts mainly for price, so it reduced to one indicator, and its results depend on choices that are hard to defend (number of clusters, scaling, what counts as a large cluster). Isolation Forest spread its flags across indicators and has no setting that changes the ranking much.
 
 - **Isolation Forest**: scores a contract by how few random splits isolate it.
 - **Clustering distance**: k-means on robustly scaled indicators; the score is the (log) distance to the nearest *large* cluster. Small clusters are not counted as ordinary, because k-means will form a cluster around a handful of extreme contracts and put them at distance zero.

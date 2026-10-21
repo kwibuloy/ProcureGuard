@@ -34,7 +34,7 @@ export const INDICATORS: Record<Indicator, IndicatorInfo> = {
   price_deviation: {
     label: 'Unusual price',
     measures:
-      'How far the awarded price sits from the median of comparable contracts, relative to the approved budget.',
+      'How far above the median of comparable contracts the awarded price sits, as a share of the budget. Awards cannot exceed the approved budget, so only a price above the median raises a score.',
     limit:
       'Comparable contracts are grouped from published fields only. Differences in scope or site conditions that are not in the data can explain a deviation.',
   },

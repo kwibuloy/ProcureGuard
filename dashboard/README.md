@@ -18,14 +18,12 @@ With no real data yet, load and score demonstration contracts from the repo root
 
 ## Screens
 
-| Route                                             | Screen                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `/`                                               | Review queue: summary, score histogram, main reasons, map by place, filterable ranked table, CSV export |
-| `/contracts/:id`                                  | Side panel over the queue explaining one contract's score; prints as a one-page summary    |
-| `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won                                |
-| `/compare`                                        | Two models side by side: shared flags, rank agreement, scatter plot, largest disagreements |
-| `/data`                                           | Data quality: rows read and left out, field completeness, impossible values                |
-| `/method`                                         | What a flag means, the three indicators, and the system's limits                           |
+| Route                                             | Screen                                                                                                                                                                              |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                               | Contracts: summary, score histogram, main reasons, map by place, filterable ranked table, CSV export                                                                                |
+| `/contracts/:id`                                  | Side panel over the queue explaining one contract's score; prints as a one-page summary                                                                                             |
+| `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won                                                                                                                         |
+| `/about`                                          | Common questions, how ProcureGuard works (what a flag means, the three indicators, the score, limits), and the data quality figures. `/data` and `/method` redirect to its sections |
 
 Filters, sort order and page live in the URL, so a filtered view can be shared as a link. View settings (grouping lots by notice, hidden columns, compact rows) also live in the URL and are saved in the browser; a link that carries settings wins over the saved ones. The scoring run on screen is chosen in the header and lasts for the browser session.
 
@@ -34,6 +32,18 @@ Filters, sort order and page live in the URL, so a filtered view can be shared a
 - Select a histogram bar or a main-reason bar to filter the list; active filters appear as removable chips.
 - `J` and `K` (or the arrow keys) move through the list, `Enter` opens a contract, `Esc` closes it, `/` jumps to search. With a contract open, `J` and `K` go to the next and previous one.
 - "Mark as reviewed" is saved in the browser only (`localStorage`). The API is read-only, so nothing about a review reaches the server or other reviewers.
+
+## Phones
+
+Below 860px wide the Contracts page is rebuilt for scrolling less (desktop is unchanged):
+
+- A one-line summary strip, then **List · Map · Charts** tabs (`tab` in the URL). The map loads only when its tab is opened.
+- Contracts are cards (about 140px), not a table, so nothing scrolls sideways. Cards leave out the rank (the order shows it) and the awardee; the contract panel shows both.
+- Search and a **Filters** button stay pinned while the list scrolls; the other filters open as a sheet from the bottom.
+- 10 contracts at a time with **Show more** (up to 100, then pages), and a back-to-top button.
+- The page tabs (Contracts, About) move to a bar at the bottom of the screen; the top bar is one 56px row.
+
+Unknown addresses, including the removed `/compare` page, redirect to `/`.
 
 ## Map
 
@@ -47,7 +57,7 @@ The map card shows flagged contracts by where the procuring entity is based (Phi
 ## Design rules
 
 - **No alarm colors.** Scores and flags are drawn in ink on paper tones. A flag is a prompt to review, so nothing is styled as a warning or an error.
-- **Color means two things, and nothing else.** Red and blue mean an indicator raised or lowered a score. On the compare page, blue and orange mean which model flagged a contract. Every pair passes the colorblind checks in light and dark themes, and each is also written out in a legend or label.
+- **Color means one thing, and nothing else.** Red and blue mean an indicator raised or lowered a score. The pair passes the colorblind checks in light and dark themes, and is also written out in a legend or label. Maps and charts use ink shades.
 - **Every score shows its reasons.** A score never appears in the detail view without the three indicators, their points and a sentence stating the figures behind each. The queue's Why column says the same in short: the indicator that raised the score most, its points, the figures behind it, and any other indicator that also raised it.
 - **Wording.** "Flagged for review" and "statistically unusual" only. Document requests are never called bids or bidders. Indicator names and sentences live in `src/indicators.ts`.
 - **Depth comes from light, not color.** Cards sit on layered shadows with a lit top edge and rise slightly under the pointer; a soft highlight follows the pointer across a card (`useSpotlight.ts`).

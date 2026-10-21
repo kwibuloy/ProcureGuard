@@ -1,15 +1,21 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { BrowserRouter, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Navigate,
+  NavLink,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import { useApi, withRun, type Overview } from './api';
 import { Icon } from './components/Icon';
 import { useSpotlight } from './components/useSpotlight';
 import { formatDate } from './format';
 import type { OverviewContext } from './overview';
-import { ComparePage } from './pages/ComparePage';
+import { AboutPage } from './pages/AboutPage';
 import { ContractPanel } from './pages/ContractPanel';
-import { DataQualityPage } from './pages/DataQualityPage';
-import { MethodPage } from './pages/MethodPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { QueuePage } from './pages/QueuePage';
 import { RunProvider, useRuns } from './run';
@@ -97,11 +103,28 @@ function RunPicker({ shownId }: { shownId: number | null }) {
 }
 
 const NAV = [
-  { to: '/', label: 'Review queue', also: ['/contracts', '/profile'] },
-  { to: '/compare', label: 'Compare models', also: [] },
-  { to: '/data', label: 'Data quality', also: [] },
-  { to: '/method', label: 'Method and limits', also: [] },
+  { to: '/', label: 'Contracts', also: ['/contracts', '/profile'] },
+  { to: '/about', label: 'About', also: [] },
 ];
+
+function NavLinks({ pathname }: { pathname: string }) {
+  return NAV.map((item) => {
+    const active =
+      item.to === '/'
+        ? pathname === '/' || item.also.some((prefix) => pathname.startsWith(prefix))
+        : pathname.startsWith(item.to);
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        className={active ? 'is-active' : ''}
+        aria-current={active ? 'page' : undefined}
+      >
+        {item.label}
+      </NavLink>
+    );
+  });
+}
 
 function Layout() {
   const { selected } = useRuns();
@@ -132,22 +155,7 @@ function Layout() {
             <span>ProcureGuard</span>
           </NavLink>
           <nav className="nav" aria-label="Main">
-            {NAV.map((item) => {
-              const active =
-                item.to === '/'
-                  ? pathname === '/' || item.also.some((prefix) => pathname.startsWith(prefix))
-                  : pathname.startsWith(item.to);
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={active ? 'is-active' : ''}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  {item.label}
-                </NavLink>
-              );
-            })}
+            <NavLinks pathname={pathname} />
           </nav>
           <div className="topbar-end">
             <RunPicker shownId={run?.id ?? null} />
@@ -172,6 +180,12 @@ function Layout() {
         <Outlet context={overview satisfies OverviewContext} />
       </main>
 
+      {/* Phones: the same links in a bar at the bottom of the screen, within thumb reach.
+          It sits outside the header, whose blur would otherwise pin it to the header. */}
+      <nav className="bottom-nav phone-only" aria-label="Main">
+        <NavLinks pathname={pathname} />
+      </nav>
+
       <footer className="footer">
         <p>
           ProcureGuard screens published PhilGEPS data to help reviewers decide where to look first.
@@ -193,9 +207,18 @@ export default function App() {
               <Route path="contracts/:id" element={<ContractPanel />} />
             </Route>
             <Route path="/profile/:kind" element={<ProfilePage />} />
-            <Route path="/compare" element={<ComparePage />} />
-            <Route path="/data" element={<DataQualityPage />} />
-            <Route path="/method" element={<MethodPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            {/* The data quality and method pages became sections of the About page. */}
+            <Route
+              path="/data"
+              element={<Navigate to={{ pathname: '/about', hash: '#data' }} replace />}
+            />
+            <Route
+              path="/method"
+              element={<Navigate to={{ pathname: '/about', hash: '#method' }} replace />}
+            />
+            {/* Old links (the removed compare page) and typos land on the contract list. */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </RunProvider>
