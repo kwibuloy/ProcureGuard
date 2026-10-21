@@ -288,19 +288,13 @@ kbd {
   text-decoration: none;
 }
 
-.brand-tile {
-  fill: var(--ink);
-}
-
-.brand-bars {
-  fill: none;
-  stroke: var(--plane);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.brand-dot {
-  fill: var(--plane);
+.brand-logo {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: var(--ink);
+  -webkit-mask: url('/logo.png') center / contain no-repeat;
+  mask: url('/logo.png') center / contain no-repeat;
 }
 
 .nav {
