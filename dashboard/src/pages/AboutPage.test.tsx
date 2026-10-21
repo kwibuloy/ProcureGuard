@@ -52,6 +52,8 @@ describe('AboutPage', () => {
     expect(screen.getByRole('heading', { name: 'About the data' })).toBeInTheDocument();
     expect(await screen.findByText('Contracts available for scoring')).toBeInTheDocument();
     expect(screen.getByText('105 of 80,000 public bidding contracts')).toBeInTheDocument();
+    // 105 of 80,000 is 0.13%: shown with a decimal, not rounded to 0%.
+    expect(screen.getAllByText('0.1%').length).toBeGreaterThan(0);
   });
 
   it('answers that a flag is not an accusation', async () => {
