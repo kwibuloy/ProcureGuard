@@ -238,6 +238,9 @@ function AboutTheData() {
     const intake = data.load?.intake ?? {};
     const rowsRead = intake.rows_read ?? 0;
     const requests = data.documentRequests;
+    const collectedShare = requests.wanted ? requests.collected / requests.wanted : 0;
+    // A small share rounds to "0%", which reads as "none collected"; keep a decimal.
+    const shareFormat = (value: number) => formatPercent(value, collectedShare < 0.1 ? 1 : 0);
     const unreadable = Object.entries(intake).filter(([key]) => key.startsWith('unreadable'));
     const fields = [...data.fields].sort((first, second) => first.present - second.present);
     const names = [
@@ -260,13 +263,10 @@ function AboutTheData() {
           />
           <Tile
             label="Document request counts collected"
-            value={formatPercent(requests.wanted ? requests.collected / requests.wanted : 0)}
-            count={{
-              to: requests.wanted ? requests.collected / requests.wanted : 0,
-              format: formatPercent,
-            }}
+            value={shareFormat(collectedShare)}
+            count={{ to: collectedShare, format: shareFormat }}
             note={`${formatCount(requests.collected)} of ${formatCount(requests.wanted)} public bidding contracts`}
-            share={requests.wanted ? requests.collected / requests.wanted : 0}
+            share={collectedShare}
           />
           <Tile
             label="Procured through public bidding"
