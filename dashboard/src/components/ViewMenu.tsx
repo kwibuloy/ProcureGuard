@@ -1,4 +1,5 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef } from 'react';
+import { PHONE, useMedia } from '../useMedia';
 import { COLUMN_LABELS, COLUMNS, type ViewSettings } from '../view';
 import { Icon } from './Icon';
 
@@ -7,21 +8,11 @@ const HIDEABLE = COLUMNS;
 
 /** Columns the layout drops on narrow screens (styles.css), whatever the setting. */
 const NARROW_HIDDEN: Record<string, readonly string[]> = {
-  '(max-width: 860px)': ['rank', 'entity', 'awardee'],
+  // Phone cards leave out the rank (their order shows it) and the awardee, to stay
+  // short; the contract panel shows both.
+  [PHONE]: ['rank', 'awardee'],
   '(max-width: 1180px)': ['awardee'],
 };
-
-function useMedia(query: string) {
-  return useSyncExternalStore(
-    (onChange) => {
-      const list = window.matchMedia?.(query);
-      list?.addEventListener('change', onChange);
-      return () => list?.removeEventListener('change', onChange);
-    },
-    () => window.matchMedia?.(query).matches ?? false,
-    () => false,
-  );
-}
 
 /** The review list's "View" button: which columns show, and row density. */
 export function ViewMenu({
@@ -32,14 +23,10 @@ export function ViewMenu({
   onChange: (next: ViewSettings) => void;
 }) {
   const menu = useRef<HTMLDetailsElement>(null);
-  const phone = useMedia('(max-width: 860px)');
+  const phone = useMedia(PHONE);
   const tablet = useMedia('(max-width: 1180px)');
   const narrowHidden = new Set(
-    phone
-      ? NARROW_HIDDEN['(max-width: 860px)']
-      : tablet
-        ? NARROW_HIDDEN['(max-width: 1180px)']
-        : [],
+    phone ? NARROW_HIDDEN[PHONE] : tablet ? NARROW_HIDDEN['(max-width: 1180px)'] : [],
   );
 
   // Close on a click outside or on Escape, like any other menu.

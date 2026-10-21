@@ -224,10 +224,14 @@ function listParams(query: ListQuery, run: number | null): URLSearchParams {
   return params;
 }
 
-export function contractsPath(query: ListQuery, run: number | null): string {
+/** Phones list fewer rows at a time and add more on request. */
+export const PHONE_PAGE_SIZE = 10;
+export const MAX_PAGE_SIZE = 100;
+
+export function contractsPath(query: ListQuery, run: number | null, size = PAGE_SIZE): string {
   const params = listParams(query, run);
   params.set('page', String(query.page));
-  params.set('pageSize', String(PAGE_SIZE));
+  params.set('pageSize', String(size));
   if (query.grouped) params.set('group', 'true');
   return `/api/contracts?${params}`;
 }

@@ -3,7 +3,8 @@ import { Outlet, useMatch, useNavigate, useSearchParams } from 'react-router-dom
 import {
   contractsPath,
   exportPath,
-  PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  PHONE_PAGE_SIZE,
   useApi,
   type ContractList,
   type Indicator,
@@ -31,6 +32,7 @@ import {
 import { INDICATOR_ORDER, INDICATORS } from '../indicators';
 import { useOverview } from '../overview';
 import { useReviewed } from '../reviewed';
+import { PHONE, useMedia } from '../useMedia';
 import {
   hasViewParams,
   loadSavedView,
@@ -115,6 +117,76 @@ function Summary({ overview }: { overview: Overview }) {
   );
 }
 
+/** The summary in one strip, for phones: the same four figures, without the cards. */
+function SummaryStrip({ overview }: { overview: Overview }) {
+  const { totals, run } = overview;
+  const share = totals.contracts ? totals.flagged / totals.contracts : 0;
+  return (
+    <section className="summary-strip phone-only" aria-label="Summary of the scoring run">
+      <dl>
+        <div>
+          <dt>Flagged</dt>
+          <dd>{formatCount(totals.flagged)}</dd>
+          <dd className="strip-note">{formatPercent(share, 1)} of all</dd>
+        </div>
+        <div>
+          <dt>Value</dt>
+          <dd>{formatPesoCompact(totals.flaggedValue)}</dd>
+          <dd className="strip-note">of {formatPesoCompact(totals.totalValue)}</dd>
+        </div>
+        <div>
+          <dt>Entities</dt>
+          <dd>{formatCount(totals.entitiesWithFlag)}</dd>
+          <dd className="strip-note">of {formatCount(totals.entities)}</dd>
+        </div>
+        <div>
+          <dt>Cut-off</dt>
+          <dd>{run?.flagThreshold == null ? '–' : `${toPoints(run.flagThreshold)}+`}</dd>
+          <dd className="strip-note">of 100</dd>
+        </div>
+      </dl>
+      <p className="strip-caution">
+        A flag means statistically unusual and worth a look, not wrongdoing.
+      </p>
+    </section>
+  );
+}
+
+type PhoneTab = 'list' | 'map' | 'charts';
+const PHONE_TABS: { key: PhoneTab; label: string }[] = [
+  { key: 'list', label: 'List' },
+  { key: 'map', label: 'Map' },
+  { key: 'charts', label: 'Charts' },
+];
+
+/** A button back to the top, shown on phones once the page has been scrolled a way. */
+function BackToTop() {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setShown(window.scrollY > window.innerHeight * 1.5));
+    };
+    window.addEventListener('scroll', check, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', check);
+    };
+  }, []);
+  if (!shown) return null;
+  return (
+    <button
+      type="button"
+      className="back-to-top phone-only"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Back to top"
+    >
+      <Icon name="chevronUp" size={20} />
+    </button>
+  );
+}
+
 function Pagination({ list, onPage }: { list: ContractList; onPage: (page: number) => void }) {
   const pages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const first = list.total === 0 ? 0 : (list.page - 1) * list.pageSize + 1;
@@ -158,9 +230,26 @@ export function QueuePage() {
   const overview = useOverview();
   const run = overview.data?.run ?? null;
   const [params, setParams] = useSearchParams();
+  const phone = useMedia(PHONE);
+  const tabParam = params.get('tab');
+  const tab: PhoneTab = tabParam === 'map' || tabParam === 'charts' ? tabParam : 'list';
   const query = readQuery(params);
   const view = readView(params);
-  const list = useApi<ContractList>(run ? contractsPath(query, run.id) : null);
+  // Phones show 10 rows and add 10 more on request, starting over when the filters change.
+  const listKey = contractsPath({ ...query, page: 1 }, run?.id ?? null);
+  const [more, setMore] = useState({ key: '', size: PHONE_PAGE_SIZE });
+  const phoneSize = more.key === listKey ? more.size : PHONE_PAGE_SIZE;
+  const listPath = !run
+    ? null
+    : phone
+      ? contractsPath(
+          { ...query, page: phoneSize < MAX_PAGE_SIZE ? 1 : query.page },
+          run.id,
+          phoneSize,
+        )
+      : contractsPath(query, run.id);
+  const list = useApi<ContractList>(listPath);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const openId = Number(useMatch('/contracts/:id')?.params.id) || null;
   const search = params.toString();
   const navigate = useNavigate();
@@ -250,7 +339,7 @@ export function QueuePage() {
     return (
       <div className="card">
         <Notice title="No contracts have been scored yet">
-          Load PhilGEPS data and run the scoring step. The review queue appears here once a scoring
+          Load PhilGEPS data and run the scoring step. The contract list appears here once a scoring
           run has been stored.
         </Notice>
       </div>
@@ -279,6 +368,10 @@ export function QueuePage() {
   }
   if (band) chips.push({ label: band, clear: { scoreFrom: '', scoreTo: '' } });
 
+  const filterCount =
+    [query.region, query.entityType, query.reason].filter(Boolean).length +
+    (query.sort === 'rank' ? 0 : 1);
+
   const clearAll = () => {
     setText('');
     update({
@@ -295,10 +388,29 @@ export function QueuePage() {
 
   return (
     <>
-      <h1 className="visually-hidden">Review queue</h1>
-      <Summary overview={overview.data} />
+      <h1 className="visually-hidden">Contracts</h1>
+      <div className="wide-only-block">
+        <Summary overview={overview.data} />
+      </div>
+      <SummaryStrip overview={overview.data} />
 
-      <section className="charts">
+      <div className="phone-tabs phone-only" role="tablist" aria-label="Show">
+        {PHONE_TABS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.key}
+            onClick={() =>
+              update({ tab: item.key === 'list' ? '' : item.key, page: params.get('page') ?? '' })
+            }
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <section className={`charts phone-section ${tab === 'charts' ? 'is-active' : ''}`}>
         <div className="card">
           <h2>How the scores are spread</h2>
           <p className="card-note">
@@ -347,17 +459,33 @@ export function QueuePage() {
         </div>
       </section>
 
-      <PlaceMap
-        run={run.id}
-        onFilter={(place) => {
-          update({ region: place.region, province: place.province, city: place.city });
-        }}
-      />
+      <div className={`phone-section ${tab === 'map' ? 'is-active' : ''}`}>
+        <PlaceMap
+          run={run.id}
+          onFilter={(place) => {
+            update({ region: place.region, province: place.province, city: place.city });
+          }}
+        />
+        <button
+          type="button"
+          className="button phone-only map-to-list"
+          onClick={() => update({ tab: '' })}
+        >
+          {list.data
+            ? `Show ${listCount(list.data.total, list.data.matchedContracts)} in the list`
+            : 'Show the list'}
+        </button>
+      </div>
 
-      <section className="card queue" aria-labelledby="queue-title">
+      <section
+        className={`card queue phone-section ${tab === 'list' ? 'is-active' : ''}`}
+        aria-labelledby="queue-title"
+      >
         <div className="queue-head">
           <div>
-            <h2 id="queue-title">Contracts to review</h2>
+            <h2 id="queue-title" className="queue-title">
+              Contracts to review
+            </h2>
             <p className="card-note" aria-live="polite">
               {list.data
                 ? `${listCount(list.data.total, list.data.matchedContracts)}${chips.length ? ' match the filters' : ''}`
@@ -426,57 +554,86 @@ export function QueuePage() {
             />
             <kbd aria-hidden="true">/</kbd>
           </label>
-          <label className="field">
-            <span className="visually-hidden">Region</span>
-            <select
-              value={query.region}
-              onChange={(event) => update({ region: event.target.value })}
-            >
-              <option value="">All regions</option>
-              {filters.regions.map((region) => (
-                <option key={region}>{region}</option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span className="visually-hidden">Type of procuring entity</span>
-            <select
-              value={query.entityType}
-              onChange={(event) => update({ entityType: event.target.value })}
-            >
-              <option value="">All entity types</option>
-              {filters.entityTypes.map((type) => (
-                <option key={type}>{type}</option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span className="visually-hidden">Main reason</span>
-            <select
-              value={query.reason}
-              onChange={(event) => update({ reason: event.target.value })}
-            >
-              <option value="">Any main reason</option>
-              {INDICATOR_ORDER.map((indicator) => (
-                <option key={indicator} value={indicator}>
-                  {INDICATORS[indicator].label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field field-sort">
-            <span className="visually-hidden">Sort order</span>
-            <select
-              value={query.sort === 'rank' ? '' : query.sort}
-              onChange={(event) => update({ sort: event.target.value })}
-            >
-              {Object.entries(SORT_LABELS).map(([value, label]) => (
-                <option key={value} value={value === 'rank' ? '' : value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <button
+            type="button"
+            className="button button-outline filters-toggle phone-only"
+            onClick={() => setFiltersOpen(true)}
+            aria-expanded={filtersOpen}
+            aria-controls="filter-fields"
+          >
+            <Icon name="sliders" />
+            Filters{filterCount ? ` · ${filterCount}` : ''}
+          </button>
+          {filtersOpen && (
+            <div
+              className="sheet-scrim phone-only"
+              onClick={() => setFiltersOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+          <div
+            id="filter-fields"
+            className={`filter-fields ${filtersOpen ? 'is-open' : ''}`}
+            onKeyDown={(event) => event.key === 'Escape' && setFiltersOpen(false)}
+          >
+            <div className="sheet-head phone-only">
+              <h3>Filters</h3>
+              <button type="button" className="button" onClick={() => setFiltersOpen(false)}>
+                Done
+              </button>
+            </div>
+            <label className="field">
+              <span className="visually-hidden">Region</span>
+              <select
+                value={query.region}
+                onChange={(event) => update({ region: event.target.value })}
+              >
+                <option value="">All regions</option>
+                {filters.regions.map((region) => (
+                  <option key={region}>{region}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="visually-hidden">Type of procuring entity</span>
+              <select
+                value={query.entityType}
+                onChange={(event) => update({ entityType: event.target.value })}
+              >
+                <option value="">All entity types</option>
+                {filters.entityTypes.map((type) => (
+                  <option key={type}>{type}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="visually-hidden">Main reason</span>
+              <select
+                value={query.reason}
+                onChange={(event) => update({ reason: event.target.value })}
+              >
+                <option value="">Any main reason</option>
+                {INDICATOR_ORDER.map((indicator) => (
+                  <option key={indicator} value={indicator}>
+                    {INDICATORS[indicator].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field field-sort">
+              <span className="visually-hidden">Sort order</span>
+              <select
+                value={query.sort === 'rank' ? '' : query.sort}
+                onChange={(event) => update({ sort: event.target.value })}
+              >
+                {Object.entries(SORT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value === 'rank' ? '' : value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         {chips.length > 0 && (
@@ -555,13 +712,36 @@ export function QueuePage() {
                 <kbd>K</kbd> move <kbd>Enter</kbd> open <kbd>Esc</kbd> close
               </p>
             </div>
-            {list.data && list.data.total > PAGE_SIZE && (
-              <Pagination list={list.data} onPage={(page) => update({ page: String(page) })} />
+            {phone && list.data && rows.length < list.data.total && phoneSize < MAX_PAGE_SIZE ? (
+              <div className="show-more">
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={list.loading}
+                  onClick={() =>
+                    setMore({
+                      key: listKey,
+                      size: Math.min(MAX_PAGE_SIZE, phoneSize + PHONE_PAGE_SIZE),
+                    })
+                  }
+                >
+                  Show {Math.min(PHONE_PAGE_SIZE, list.data.total - rows.length)} more
+                </button>
+                <p className="card-note">
+                  {formatCount(rows.length)} of {formatCount(list.data.total)} shown
+                </p>
+              </div>
+            ) : (
+              list.data &&
+              list.data.total > list.data.pageSize && (
+                <Pagination list={list.data} onPage={(page) => update({ page: String(page) })} />
+              )
             )}
           </>
         )}
       </section>
 
+      <BackToTop />
       <Outlet context={{ ...overview, listIds: ids }} />
     </>
   );

@@ -15,7 +15,7 @@ PhilGEPS CSV files -> pipeline/ -> PostgreSQL -> ml/ -> PostgreSQL -> api/ -> da
 | Ingestion and preprocessing | `pipeline/` | Downloads the quarterly files, cleans them, loads one row per awarded civil works contract | [pipeline/README.md](pipeline/README.md) |
 | Indicators, model, SHAP | `ml/` | Computes three indicators, scores every contract, explains each score | [ml/README.md](ml/README.md) |
 | API | `api/` | Serves contracts and scores, read-only | [api/README.md](api/README.md) |
-| Dashboard | `dashboard/` | Review queue, contract detail, profiles, model comparison, data quality | [dashboard/README.md](dashboard/README.md) |
+| Dashboard | `dashboard/` | Contracts list and map, contract detail, profiles, About (questions, method, data quality) | [dashboard/README.md](dashboard/README.md) |
 
 The layers talk only through PostgreSQL. What the PhilGEPS portal actually provides is recorded in [docs/data-source.md](docs/data-source.md).
 

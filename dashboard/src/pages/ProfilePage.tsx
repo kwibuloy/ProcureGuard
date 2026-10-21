@@ -98,7 +98,7 @@ export function ProfilePage() {
     <>
       <header className="page-header">
         <Link to="/" className="back-link">
-          <Icon name="arrowLeft" /> Review queue
+          <Icon name="arrowLeft" /> Contracts
         </Link>
         <p className="eyebrow">{words.eyebrow}</p>
         <h1>{data.name}</h1>

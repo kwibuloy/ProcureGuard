@@ -3,9 +3,8 @@
    One calm, neutral system: ink on warm paper, hairlines, no alarm colors.
    A flag is a prompt to review, so nothing is styled as a warning.
 
-   Color carries meaning in two places only:
-   - red and blue: an indicator raised or lowered a score;
-   - blue and orange: which of two models flagged a contract (compare page).
+   Color carries meaning in one place only:
+   - red and blue: an indicator raised or lowered a score.
    Everything else is ink, in three strengths.
 
    Depth comes from light, not color: surfaces sit above the page on layered
@@ -473,7 +472,6 @@ kbd {
 .summary > *,
 .charts > *,
 .tiles > *,
-.compare-grid > *,
 .quality-grid > * {
   min-width: 0;
 }
@@ -572,7 +570,8 @@ kbd {
   box-shadow: var(--highlight), var(--shadow-raised);
 }
 
-.card h2 {
+.card h2,
+.card > h3 {
   font-size: 15px;
   font-weight: 650;
   letter-spacing: -0.01em;
@@ -931,69 +930,6 @@ kbd {
 
 .tooltip span {
   opacity: 0.72;
-}
-
-/* Scatter plot (compare page) */
-
-.dots-neither circle {
-  fill: var(--mark-muted);
-}
-
-.dots-onlyA circle,
-.dot-onlyA {
-  fill: var(--series-a);
-  background: var(--series-a);
-}
-
-.dots-onlyB circle,
-.dot-onlyB {
-  fill: var(--series-b);
-  background: var(--series-b);
-}
-
-.dots-both circle,
-.dot-both {
-  fill: var(--mark);
-  background: var(--mark);
-}
-
-/* A ring in the surface color keeps overlapping points apart. */
-.dots-onlyA circle,
-.dots-onlyB circle,
-.dots-both circle {
-  stroke: var(--surface);
-  stroke-width: 2;
-}
-
-.dot-neither {
-  background: var(--mark-muted);
-}
-
-g[class^='dots-'] {
-  animation: fade 700ms ease-out backwards;
-}
-
-g.dots-onlyA,
-g.dots-onlyB {
-  animation-delay: 180ms;
-}
-
-g.dots-both {
-  animation-delay: 320ms;
-}
-
-.dot-hover {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.5;
-}
-
-.dot {
-  display: inline-block;
-  flex: none;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
 }
 
 /* Bar list */
@@ -2310,26 +2246,7 @@ g.dots-both {
   color: var(--ink);
 }
 
-/* Compare and data quality pages */
-
-.compare-pickers {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 340px));
-  gap: 16px;
-}
-
-.compare-grid {
-  display: grid;
-  grid-template-columns: 8fr 4fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.compare-caveat {
-  margin-top: 20px !important;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
+/* Data quality page */
 
 .quality-grid {
   display: grid;
@@ -2364,7 +2281,8 @@ g.dots-both {
   line-height: 1.55;
 }
 
-.prose section > h2 {
+.prose section > h2,
+.prose section > h3 {
   font-size: 20px;
   font-weight: 660;
   letter-spacing: -0.02em;
@@ -2444,7 +2362,8 @@ g.dots-both {
   margin-top: 16px;
 }
 
-.indicator-cards h3 {
+.indicator-cards h3,
+.indicator-cards h4 {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2683,6 +2602,10 @@ g.dots-both {
   touch-action: manipulation;
 }
 
+.map-svg.is-waiting .map-shape {
+  cursor: progress;
+}
+
 .map-skeleton {
   width: 100%;
   aspect-ratio: 3 / 4;
@@ -2835,7 +2758,6 @@ g.dots-both {
 @media (max-width: 1180px) {
   .summary,
   .charts,
-  .compare-grid,
   .quality-grid {
     grid-template-columns: 1fr;
   }
@@ -2884,35 +2806,10 @@ g.dots-both {
     padding-right: 16px;
   }
 
-  .topbar-inner {
-    gap: 12px;
-    height: auto;
-    flex-wrap: wrap;
-    padding-top: 10px;
-  }
-
-  .nav {
-    order: 3;
-    width: 100%;
-    height: 40px;
-    overflow-x: auto;
-  }
-
-  .nav a:first-child {
-    padding-left: 0;
-  }
-
-  .nav a.is-active:first-child::after {
-    left: 0;
-  }
-
   .run-picker select {
-    max-width: 170px;
+    max-width: 132px;
   }
 
-  .col-entity,
-  .col-rank,
-  .why-name,
   .why-text,
   .why-also,
   .keys {
@@ -2926,8 +2823,7 @@ g.dots-both {
   .tiles,
   .tiles-4,
   .pair,
-  .indicator-cards,
-  .compare-pickers {
+  .indicator-cards {
     grid-template-columns: 1fr;
   }
 
@@ -3141,5 +3037,509 @@ g.dots-both {
 
   * {
     animation: none !important;
+  }
+}
+
+/* About page: common questions, then how it works, then the data. */
+.about {
+  display: grid;
+  gap: 44px;
+}
+
+.about [id] {
+  scroll-margin-top: 80px;
+}
+
+.about-heading {
+  font-size: 26px;
+  font-weight: 680;
+  letter-spacing: -0.028em;
+}
+
+.about-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.about-jump a {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.about-jump a:hover {
+  border-color: var(--ink-3);
+}
+
+.about-section-head .lede {
+  margin-top: 8px;
+  max-width: 72ch;
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.about-data {
+  display: grid;
+  gap: 20px;
+}
+
+/* While the figures load, hold about their final height, so a link to #data can
+   scroll the section to the top before they arrive. */
+.about-data > .skeleton-block {
+  min-height: 1100px;
+}
+
+.faq {
+  display: grid;
+  gap: 14px;
+  max-width: 940px;
+}
+
+.faq-list {
+  padding: 0;
+}
+
+.faq-item + .faq-item {
+  border-top: 1px solid var(--line);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary .icon {
+  flex: none;
+  color: var(--ink-3);
+  transition: transform 180ms var(--ease);
+}
+
+.faq-item[open] summary .icon {
+  transform: rotate(180deg);
+}
+
+.faq-item summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.faq-answer {
+  padding: 0 20px 18px;
+  max-width: 72ch;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+/* Phones: the list comes first, behind a one-line summary and List / Map / Charts tabs.
+   Desktop keeps every section on one page; these rules only change narrow screens. */
+.filter-fields {
+  display: contents;
+}
+
+@media (min-width: 861px) {
+  .phone-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .wide-only-block,
+  .phone-section:not(.is-active) {
+    display: none;
+  }
+
+  /* Top bar: one 56px row; the page tabs move to a bar at the bottom of the screen. */
+  .topbar-inner {
+    flex-wrap: nowrap;
+    height: 56px;
+    padding-top: 0;
+  }
+
+  .topbar .nav {
+    display: none;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--plane) 92%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-top: 1px solid var(--line);
+  }
+
+  .bottom-nav a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .bottom-nav a.is-active {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .bottom-nav a.is-active::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 28%;
+    right: 28%;
+    height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: var(--ink);
+  }
+
+  .footer {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* Summary in one strip. */
+  .summary-strip {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .summary-strip dl {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+
+  .summary-strip dt {
+    color: var(--ink-3);
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .summary-strip dd {
+    margin: 2px 0 0;
+    font-size: 16px;
+    font-weight: 660;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-strip .strip-note {
+    margin: 0;
+    color: var(--ink-3);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .strip-caution {
+    margin: 10px 0 0;
+    color: var(--ink-2);
+    font-size: 12px;
+  }
+
+  /* The List tab names the list; the heading stays for screen readers. */
+  .queue-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .phone-tabs {
+    display: flex;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--wash-strong);
+    box-shadow: var(--shadow-inset);
+  }
+
+  .phone-tabs button {
+    flex: 1;
+    height: 36px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ink-2);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .phone-tabs button[aria-selected='true'] {
+    background: var(--surface-raised);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow:
+      var(--highlight),
+      0 1px 2px rgba(11, 11, 11, 0.18);
+  }
+
+  .map-to-list {
+    display: flex;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  /* Search and the Filters button stay in view while the list scrolls. */
+  .queue {
+    overflow: visible;
+  }
+
+  .filters {
+    position: sticky;
+    top: 56px;
+    z-index: 6;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .filters > .field-search {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .field-search kbd {
+    display: none;
+  }
+
+  .filters-toggle {
+    flex: none;
+    padding: 0 12px;
+  }
+
+  /* The other filters open as a sheet from the bottom of the screen. */
+  .filter-fields {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: grid;
+    gap: 10px;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-pop);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition:
+      transform 260ms var(--ease),
+      visibility 0s 260ms;
+  }
+
+  .filter-fields.is-open {
+    transform: none;
+    visibility: visible;
+    transition: transform 260ms var(--ease);
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sheet-head h3 {
+    margin: 0;
+  }
+
+  .sheet-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    background: var(--scrim);
+  }
+
+  /* Contracts as cards, so nothing scrolls sideways. */
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .queue-table,
+  .queue-table tbody {
+    display: block;
+  }
+
+  .queue-table thead {
+    display: none;
+  }
+
+  .queue-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .queue-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .queue-table td,
+  .queue-table td:first-child,
+  .queue-table td:last-child,
+  .queue-table .col-contract {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .queue-table .col-contract {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .queue-table .row-link {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .queue-table .col-score {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    width: auto;
+  }
+
+  .queue-table .col-rank,
+  .queue-table .col-share {
+    width: auto;
+  }
+
+  .queue-table .col-score .meter {
+    display: none;
+  }
+
+  .queue-table .score-number {
+    display: inline-block;
+    min-width: 36px;
+    padding: 2px 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    text-align: center;
+  }
+
+  .queue-table tr:not(.is-unflagged) .score-number {
+    border-color: var(--ink);
+  }
+
+  /* The order already shows the rank. */
+  .queue-table td.col-rank {
+    display: none;
+  }
+
+  .queue-table .col-entity {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 4px;
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .queue-table .col-entity .cell-sub,
+  .queue-table .col-awardee {
+    display: none;
+  }
+
+  .queue-table .col-amount {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .queue-table .col-amount .cell-sub {
+    margin-top: 0;
+    font-size: 11px;
+  }
+
+  .queue-table .col-share {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 2px;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .queue-table .col-share .cell-sub {
+    display: none;
+  }
+
+  .queue-table .col-reason {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    min-width: 0;
+    max-width: none;
+    margin-top: 8px;
+  }
+
+  .show-more {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 16px;
+  }
+
+  .back-to-top {
+    position: fixed;
+    right: 16px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    z-index: 24;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--surface-raised);
+    color: var(--ink);
+    box-shadow: var(--shadow-pop);
+    cursor: pointer;
   }
 }

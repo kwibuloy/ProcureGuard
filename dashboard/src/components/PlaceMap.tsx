@@ -221,6 +221,10 @@ export function PlaceMap({
       : 'No contracts in this run';
 
   const pick = (code: number) => {
+    // Below the country level a place's filter comes from the matched names; picking
+    // before they load would filter on nothing and list every contract. A region's
+    // filter is its fixed label, so the country map never waits.
+    if (level.kind !== 'country' && !figuresReady) return;
     const totals = totalsFor(code);
     const name = nameOf(code);
     if (level.kind === 'country') {
@@ -350,7 +354,7 @@ export function PlaceMap({
           ) : drawn ? (
             <svg
               viewBox={`0 0 ${MAP_WIDTH} ${drawn.height}`}
-              className="map-svg"
+              className={`map-svg ${figuresReady || level.kind === 'country' ? '' : 'is-waiting'}`}
               role="group"
               aria-label="Map of flagged contracts"
             >

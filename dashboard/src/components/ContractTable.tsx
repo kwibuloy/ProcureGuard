@@ -25,7 +25,7 @@ interface Props {
   loading?: boolean;
 }
 
-/** The ranked list of contracts, used by the review queue and the profile pages. */
+/** The ranked list of contracts, used by the Contracts page and the profile pages. */
 export function ContractTable({
   rows,
   threshold,
