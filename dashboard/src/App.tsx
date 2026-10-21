@@ -147,11 +147,8 @@ function Layout() {
       <header className="topbar">
         <div className="topbar-inner">
           <NavLink to="/" className="brand" aria-label="ProcureGuard home">
-            <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
-              <rect width="32" height="32" rx="8" className="brand-tile" />
-              <path d="M9 22V10m7 12V14m7 8v-5" className="brand-bars" />
-              <circle cx="23" cy="10.5" r="2.5" className="brand-dot" />
-            </svg>
+            {/* The shield logo, drawn in the theme's ink so it suits light and dark. */}
+            <span className="brand-logo" aria-hidden="true" />
             <span>ProcureGuard</span>
           </NavLink>
           <nav className="nav" aria-label="Main">
