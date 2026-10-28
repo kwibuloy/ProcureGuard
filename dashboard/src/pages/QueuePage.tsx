@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Outlet, useMatch, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   contractsPath,
@@ -250,6 +251,7 @@ export function QueuePage() {
       : contractsPath(query, run.id);
   const list = useApi<ContractList>(listPath);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const placeFilters = (node: ReactNode) => (phone ? createPortal(node, document.body) : node);
   const openId = Number(useMatch('/contracts/:id')?.params.id) || null;
   const search = params.toString();
   const navigate = useNavigate();
@@ -547,7 +549,7 @@ export function QueuePage() {
             <input
               ref={searchBox}
               type="search"
-              placeholder="Search project, place or name"
+              placeholder={phone ? 'Search contracts' : 'Search project, place or name'}
               title="Search by project title, city or province, procuring entity, awardee, or reference number"
               value={text}
               onChange={(event) => setText(event.target.value)}
@@ -564,76 +566,83 @@ export function QueuePage() {
             <Icon name="sliders" />
             Filters{filterCount ? ` · ${filterCount}` : ''}
           </button>
-          {filtersOpen && (
-            <div
-              className="sheet-scrim phone-only"
-              onClick={() => setFiltersOpen(false)}
-              aria-hidden="true"
-            />
+          {/* On phones the other filters open as a sheet over the page. It is rendered at the
+              top level, because inside the list card it could not rise above the bottom
+              tab bar; on wider screens the same fields sit inline in this bar. */}
+          {placeFilters(
+            <>
+              {filtersOpen && (
+                <div
+                  className="sheet-scrim phone-only"
+                  onClick={() => setFiltersOpen(false)}
+                  aria-hidden="true"
+                />
+              )}
+              <div
+                id="filter-fields"
+                className={`filter-fields ${filtersOpen ? 'is-open' : ''}`}
+                onKeyDown={(event) => event.key === 'Escape' && setFiltersOpen(false)}
+              >
+                <div className="sheet-head phone-only">
+                  <h3>Filters</h3>
+                  <button type="button" className="button" onClick={() => setFiltersOpen(false)}>
+                    Done
+                  </button>
+                </div>
+                <label className="field">
+                  <span className="visually-hidden">Region</span>
+                  <select
+                    value={query.region}
+                    onChange={(event) => update({ region: event.target.value })}
+                  >
+                    <option value="">All regions</option>
+                    {filters.regions.map((region) => (
+                      <option key={region}>{region}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span className="visually-hidden">Type of procuring entity</span>
+                  <select
+                    value={query.entityType}
+                    onChange={(event) => update({ entityType: event.target.value })}
+                  >
+                    <option value="">All entity types</option>
+                    {filters.entityTypes.map((type) => (
+                      <option key={type}>{type}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span className="visually-hidden">Main reason</span>
+                  <select
+                    value={query.reason}
+                    onChange={(event) => update({ reason: event.target.value })}
+                  >
+                    <option value="">Any main reason</option>
+                    {INDICATOR_ORDER.map((indicator) => (
+                      <option key={indicator} value={indicator}>
+                        {INDICATORS[indicator].label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field field-sort">
+                  <span className="visually-hidden">Sort order</span>
+                  <select
+                    value={query.sort === 'rank' ? '' : query.sort}
+                    onChange={(event) => update({ sort: event.target.value })}
+                  >
+                    {Object.entries(SORT_LABELS).map(([value, label]) => (
+                      <option key={value} value={value === 'rank' ? '' : value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </>,
           )}
-          <div
-            id="filter-fields"
-            className={`filter-fields ${filtersOpen ? 'is-open' : ''}`}
-            onKeyDown={(event) => event.key === 'Escape' && setFiltersOpen(false)}
-          >
-            <div className="sheet-head phone-only">
-              <h3>Filters</h3>
-              <button type="button" className="button" onClick={() => setFiltersOpen(false)}>
-                Done
-              </button>
-            </div>
-            <label className="field">
-              <span className="visually-hidden">Region</span>
-              <select
-                value={query.region}
-                onChange={(event) => update({ region: event.target.value })}
-              >
-                <option value="">All regions</option>
-                {filters.regions.map((region) => (
-                  <option key={region}>{region}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span className="visually-hidden">Type of procuring entity</span>
-              <select
-                value={query.entityType}
-                onChange={(event) => update({ entityType: event.target.value })}
-              >
-                <option value="">All entity types</option>
-                {filters.entityTypes.map((type) => (
-                  <option key={type}>{type}</option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span className="visually-hidden">Main reason</span>
-              <select
-                value={query.reason}
-                onChange={(event) => update({ reason: event.target.value })}
-              >
-                <option value="">Any main reason</option>
-                {INDICATOR_ORDER.map((indicator) => (
-                  <option key={indicator} value={indicator}>
-                    {INDICATORS[indicator].label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field field-sort">
-              <span className="visually-hidden">Sort order</span>
-              <select
-                value={query.sort === 'rank' ? '' : query.sort}
-                onChange={(event) => update({ sort: event.target.value })}
-              >
-                {Object.entries(SORT_LABELS).map(([value, label]) => (
-                  <option key={value} value={value === 'rank' ? '' : value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
         </div>
 
         {chips.length > 0 && (
