@@ -70,6 +70,8 @@ export interface ContractList {
   page: number;
   pageSize: number;
   items: ContractRow[];
+  /** Most contracts one CSV export holds; a longer list is exported best-ranked first. */
+  exportLimit?: number;
 }
 
 export interface IndicatorResult {
