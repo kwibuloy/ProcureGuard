@@ -15,12 +15,31 @@ function cell(value: unknown): string {
 
 /** Rows as CSV with a header line, readable by Excel (BOM and CRLF line ends). */
 export function toCsv(rows: Record<string, unknown>[]): string {
+  return toCsvWithin(rows, Infinity).csv;
+}
+
+/**
+ * As toCsv, but stops before the file would exceed `maxBytes` (UTF-8, with the
+ * BOM). Returns how many rows were written, so the caller can say the file was
+ * cut short.
+ */
+export function toCsvWithin(
+  rows: Record<string, unknown>[],
+  maxBytes: number,
+): { csv: string; written: number } {
   const first = rows[0];
-  if (!first) return '';
+  if (!first) return { csv: '', written: 0 };
   const header = Object.keys(first);
-  const lines = [
-    header.join(','),
-    ...rows.map((row) => header.map((key) => cell(row[key])).join(',')),
-  ];
-  return `${BOM}${lines.join('\r\n')}\r\n`;
+  const lines = [`${BOM}${header.join(',')}\r\n`];
+  let bytes = Buffer.byteLength(lines[0]!);
+  let written = 0;
+  for (const row of rows) {
+    const line = `${header.map((key) => cell(row[key])).join(',')}\r\n`;
+    const size = Buffer.byteLength(line);
+    if (bytes + size > maxBytes) break;
+    lines.push(line);
+    bytes += size;
+    written += 1;
+  }
+  return { csv: lines.join(''), written };
 }

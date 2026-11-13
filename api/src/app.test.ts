@@ -31,6 +31,7 @@ describe('GET /api/contracts', () => {
       page: 1,
       pageSize: 25,
       items: [{ id: 1, title: 'Road', indicators: [] }],
+      exportLimit: 12_000,
     });
   });
 
