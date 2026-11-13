@@ -13,6 +13,13 @@ Run from the repo root with the virtual environment's Python. PostgreSQL must be
 
 Each run is stored as a new row in `scoring_runs`; earlier runs are kept. About a minute and a half for the 90,247 contracts of 2024 with both models.
 
+Robustness checks (read the database, write only to `data/processed/`, never change stored runs):
+
+| Check | Command | Writes |
+|---|---|---|
+| Sensitivity to the study defaults | `python -m ml.sensitivity` (or `--model clustering`) | `data/processed/sensitivity_<model>.csv` and `.json` |
+| Isolation Forest seed stability | `python -m ml.stability` | `data/processed/seed_stability.csv` and `.json` |
+
 ## What is stored
 
 - `contract_scores`: a score from 0 to 1 (higher is more statistically unusual), a rank, and whether the contract is flagged.
@@ -59,10 +66,55 @@ SHAP values are exact Shapley values over all eight combinations of the three in
 
 A repeated-winner share is the same for every contract an entity gave that awardee. If an entity awarded 57 of 63 contracts to one awardee, those 57 contracts look alike, form a dense group, and are *not* isolated: neither model treats them as rare. Contract-level anomaly detection flags contracts that differ from the rest, and a pattern repeated many times stops being different. On the demonstration data, repeated winner was not the main reason for any flagged contract for this reason. The entity pages in the dashboard show the concentration directly, which is where a reviewer will see it.
 
+## Robustness of the flagged set
+
+`ml/sensitivity.py` changes one study decision at a time (the alternatives are `SENSITIVITY_VARIANTS` in `settings.py`), recomputes the indicators, refits the model and compares the result with the default settings. `ml/stability.py` refits the Isolation Forest with each seed in `STABILITY_SEEDS` and compares it with the default seed (2024) and every pair of seeds. Both skip SHAP, which the ranking does not need.
+
+What each column means (`ml/robustness.py`):
+
+- `flagged_jaccard`: contracts flagged by both, over contracts flagged by either.
+- `default_flags_kept`: share of the default's flagged contracts that the alternative also flags.
+- `top_N_overlap`: share of the default's N highest-ranked contracts that are also in the alternative's top N (N = 100 and 500, `ROBUSTNESS_TOP_N`).
+- `spearman_all`: Spearman rank correlation of the two scores over all contracts.
+
+These compare two scorings of the same contracts. They say how much a result depends on a choice, not whether a flag is right: no labelled cases exist to say that.
+
+### Measured on the 2024 data (13 November 2026)
+
+90,204 contracts (those `ml/data.py` loads for the study period), the same set and settings as stored run 24, which the default reproduces (4,511 flagged in both). Only 103 notices have a document request count, so the document-request indicator is missing for nearly every contract and is replaced by its median; the figures below therefore mostly reflect the other two indicators, and need re-running after the document request scrape.
+
+Sensitivity, Isolation Forest (29 s):
+
+| Alternative | Flagged | Flagged Jaccard | Default flags kept | Top 100 | Top 500 | Spearman |
+|---|---|---|---|---|---|---|
+| Bands 5M, 50M (coarser) | 4,511 | 0.710 | 0.830 | 0.36 | 0.702 | 0.969 |
+| Bands 0.5M to 50M, 7 edges (finer) | 4,511 | 0.802 | 0.890 | 0.87 | 0.938 | 0.975 |
+| Bands with an extra edge at 100M | 4,511 | 0.873 | 0.932 | 0.67 | 0.742 | 0.991 |
+| 3% flagged | 2,708 | 0.600 | 0.600 | 1.00 | 1.000 | 1.000 |
+| 10% flagged | 9,021 | 0.500 | 1.000 | 1.00 | 1.000 | 1.000 |
+| Smallest comparable group 15 | 4,511 | 1.000 | 1.000 | 1.00 | 1.000 | 1.000 |
+| Smallest comparable group 50 | 4,512 | 0.997 | 0.998 | 1.00 | 0.998 | 0.999 |
+| Smallest comparable group 100 | 4,512 | 0.991 | 0.995 | 0.95 | 0.996 | 0.998 |
+| Smallest entity 3 bid notices | 5,107 | 0.794 | 0.944 | 0.88 | 0.956 | 0.943 |
+| Smallest entity 10 bid notices | 4,518 | 0.729 | 0.844 | 0.55 | 0.762 | 0.938 |
+
+The share flagged changes only the cut-off, so the ranking is unchanged (Spearman 1.000); with 3% every flag is one of the default's, with 10% every default flag stays. The smallest comparable group barely matters between 15 and 100. Budget bands and the smallest entity move the most: with coarser bands 17% of the default's flags change and only 36 of the top 100 stay. With a smallest entity of 3, more contracts share the flagging score, so 5,107 are flagged instead of 4,511.
+
+Seed stability, Isolation Forest, 10 seeds (42 s). Default seed 2024 against the 9 others: flagged Jaccard 0.888 to 0.944, top 100 overlap 0.37 to 0.68, top 500 overlap 0.650 to 0.928, Spearman 0.986 to 0.993. Over all 45 pairs of seeds (min / mean / max):
+
+| Measure | Min | Mean | Max |
+|---|---|---|---|
+| Flagged Jaccard | 0.834 | 0.905 | 0.946 |
+| Top 100 overlap | 0.37 | 0.775 | 0.99 |
+| Top 500 overlap | 0.650 | 0.866 | 0.952 |
+| Spearman | 0.982 | 0.989 | 0.995 |
+
+So the overall ranking hardly depends on the seed, and about nine in ten flags are the same whichever seed is used, but which contracts make the top 100 does depend on it. A reviewer should not read much into the difference between rank 40 and rank 140. Whether to respond (more trees, or averaging scores over seeds) is a study decision; nothing has been changed.
+
 ## Tests
 
 ```
 .venv\Scripts\python -m pytest ml
 ```
 
-Indicators are tested on small tables where the expected value is worked out by hand. Models are tested for: a planted extreme contract ranking first, contributions adding up to the score, and the same seed giving the same scores.
+Indicators are tested on small tables where the expected value is worked out by hand. Models are tested for: a planted extreme contract ranking first, contributions adding up to the score, and the same seed giving the same scores. The robustness measures are tested on hand-worked cases (`ml/tests/test_robustness.py`).

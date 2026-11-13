@@ -39,23 +39,37 @@ class Result:
     contributions: np.ndarray  # contracts x indicators
 
 
-def score_contracts(features: pd.DataFrame, model_key: str, settings: Settings) -> Result:
-    matrix = features[list(INDICATORS)].to_numpy(dtype=float)
-    model = ScaledModel(MODELS[model_key](settings), matrix)
-    scores = model.score(matrix)
-    shap_values, base_value = contributions(model.score, matrix, settings)
+def rank_and_flag(scores: np.ndarray, flag_share: float) -> tuple[np.ndarray, np.ndarray, float]:
+    """Ranks (1 = most unusual), which contracts are flagged, and the flagging score.
 
+    The highest-scoring `flag_share` of contracts is flagged; a contract tied with
+    the last of them is flagged too.
+    """
     order = np.argsort(-scores, kind="stable")
     ranks = np.empty(len(scores), dtype=int)
     ranks[order] = np.arange(1, len(scores) + 1)
-    flagged_count = max(1, math.ceil(len(scores) * settings.flag_share))
+    flagged_count = max(1, math.ceil(len(scores) * flag_share))
     threshold = float(scores[order[flagged_count - 1]])
+    return ranks, scores >= threshold, threshold
+
+
+def fit_scores(features: pd.DataFrame, model_key: str, settings: Settings):
+    """The fitted, 0-to-1 scaled model and its score for every contract."""
+    matrix = features[list(INDICATORS)].to_numpy(dtype=float)
+    model = ScaledModel(MODELS[model_key](settings), matrix)
+    return model, matrix, model.score(matrix)
+
+
+def score_contracts(features: pd.DataFrame, model_key: str, settings: Settings) -> Result:
+    model, matrix, scores = fit_scores(features, model_key, settings)
+    shap_values, base_value = contributions(model.score, matrix, settings)
+    ranks, flagged, threshold = rank_and_flag(scores, settings.flag_share)
     return Result(
         model_name=model.model.name,
         parameters=model.model.parameters,
         scores=scores,
         ranks=ranks,
-        flagged=scores >= threshold,
+        flagged=flagged,
         threshold=threshold,
         base_value=base_value,
         contributions=shap_values,

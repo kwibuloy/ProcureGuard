@@ -72,10 +72,10 @@ def repeated_winner(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
     return pd.DataFrame({"value": share, "context": context}, index=contracts.index)
 
 
-def budget_band(budget: pd.Series) -> pd.Series:
+def budget_band(budget: pd.Series, bands: tuple[int, ...] = BUDGET_BANDS) -> pd.Series:
     """Which approved-budget band each contract falls in (missing budgets stay missing)."""
     band = pd.Series(
-        np.searchsorted(BUDGET_BANDS, budget.fillna(0).to_numpy(), side="right"),
+        np.searchsorted(bands, budget.fillna(0).to_numpy(), side="right"),
         index=budget.index,
         dtype=float,
     )
@@ -103,7 +103,7 @@ def price_deviation(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
     frame = pd.DataFrame(
         {
             "ratio": ratio,
-            "band": budget_band(contracts["approved_budget"].astype(float)),
+            "band": budget_band(contracts["approved_budget"].astype(float), settings.budget_bands),
             "region": contracts["region"],
         }
     )
