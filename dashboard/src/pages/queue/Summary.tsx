@@ -24,6 +24,7 @@ export function Summary({ overview }: { overview: Overview }) {
       </div>
       <dl className="tiles">
         <Tile
+          icon="flag"
           label="Value of flagged contracts"
           value={formatPesoCompact(totals.flaggedValue)}
           count={{ to: totals.flaggedValue, format: formatPesoCompact }}
@@ -31,6 +32,7 @@ export function Summary({ overview }: { overview: Overview }) {
           share={totals.totalValue ? totals.flaggedValue / totals.totalValue : 0}
         />
         <Tile
+          icon="building"
           label="Procuring entities with a flagged contract"
           value={formatCount(totals.entitiesWithFlag)}
           count={{ to: totals.entitiesWithFlag, format: wholeCount }}
@@ -38,6 +40,7 @@ export function Summary({ overview }: { overview: Overview }) {
           share={totals.entities ? totals.entitiesWithFlag / totals.entities : 0}
         />
         <Tile
+          icon="sliders"
           label="Score needed to be flagged"
           value={run?.flagThreshold == null ? 'Not set' : String(toPoints(run.flagThreshold))}
           count={

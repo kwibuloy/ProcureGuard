@@ -55,10 +55,19 @@ export function Tile(props: {
   count?: { to: number; format: (value: number) => string };
   note?: string;
   share?: number;
+  /** A small symbol beside the label; decoration only. */
+  icon?: IconName;
 }) {
   return (
     <div className="card tile">
-      <dt>{props.label}</dt>
+      <dt>
+        {props.icon && (
+          <span className="tile-icon" aria-hidden="true">
+            <Icon name={props.icon} size={18} />
+          </span>
+        )}
+        {props.label}
+      </dt>
       <dd>
         {props.count ? <CountUp value={props.count.to} format={props.count.format} /> : props.value}
       </dd>

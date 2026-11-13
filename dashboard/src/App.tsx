@@ -10,7 +10,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { useApi, withRun, type Overview } from './api';
-import { Icon } from './components/Icon';
+import { Icon, type IconName } from './components/Icon';
 import { useSpotlight } from './components/useSpotlight';
 import { formatDate } from './format';
 import type { OverviewContext } from './overview';
@@ -102,9 +102,9 @@ function RunPicker({ shownId }: { shownId: number | null }) {
   );
 }
 
-const NAV = [
-  { to: '/', label: 'Contracts', also: ['/contracts', '/profile'] },
-  { to: '/about', label: 'About', also: [] },
+const NAV: { to: string; label: string; icon: IconName; also: string[] }[] = [
+  { to: '/', label: 'Contracts', icon: 'flag', also: ['/contracts', '/profile'] },
+  { to: '/about', label: 'About', icon: 'info', also: [] },
 ];
 
 function NavLinks({ pathname }: { pathname: string }) {
@@ -120,7 +120,10 @@ function NavLinks({ pathname }: { pathname: string }) {
         className={active ? 'is-active' : ''}
         aria-current={active ? 'page' : undefined}
       >
-        {item.label}
+        <span className="nav-icon" aria-hidden="true">
+          <Icon name={item.icon} size={17} />
+        </span>
+        <span className="nav-label">{item.label}</span>
       </NavLink>
     );
   });
@@ -154,6 +157,14 @@ function Layout() {
           <nav className="nav" aria-label="Main">
             <NavLinks pathname={pathname} />
           </nav>
+          {/* Wide screens show the header as a sidebar; this note sits at its foot. */}
+          <aside className="sidebar-note" aria-label="How to read a flag">
+            <p className="sidebar-note-title">A flag is a prompt</p>
+            <p>It marks a contract as statistically unusual and worth a look, not as wrongdoing.</p>
+            <NavLink to="/about#method" className="sidebar-note-link">
+              How scores work
+            </NavLink>
+          </aside>
           <div className="topbar-end">
             <RunPicker shownId={run?.id ?? null} />
             <ThemeToggle />
