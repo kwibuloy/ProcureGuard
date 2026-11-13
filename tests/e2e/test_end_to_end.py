@@ -3,7 +3,7 @@
 Checks that each layer reads what the previous one wrote. It uses its own
 database on the local PostgreSQL server and removes it afterwards, so the
 working database is never touched. Skipped when PostgreSQL or Node is not
-available.
+available, unless E2E_REQUIRED is set (CI sets it), in which case it fails.
 
 Run with: python -m pytest tests/e2e
 """
@@ -42,6 +42,13 @@ HEADER = (
 )
 # The one contract built to be unusual on every indicator.
 PLANTED_AWARD = "9000"
+
+
+def _unavailable(reason: str):
+    """Skip locally; fail in CI, where a skipped end-to-end run would hide a broken setup."""
+    if os.environ.get("E2E_REQUIRED"):
+        pytest.fail(reason)
+    pytest.skip(reason)
 
 
 def _rows() -> list[str]:
@@ -89,7 +96,7 @@ def database():
     try:
         admin = connect()
     except (psycopg.OperationalError, KeyError) as error:
-        pytest.skip(f"PostgreSQL is not available: {error}")
+        _unavailable(f"PostgreSQL is not available: {error}")
     admin.autocommit = True
     name = sql.Identifier(DATABASE)
     admin.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(name))
@@ -144,7 +151,7 @@ def scored(database, tmp_path_factory):
 def api(scored):
     """The real Express API, started against the test database."""
     if shutil.which("npx") is None or not (config.ROOT / "api" / "node_modules").exists():
-        pytest.skip("Node dependencies for api/ are not installed")
+        _unavailable("Node dependencies for api/ are not installed")
     environment = {**os.environ, "POSTGRES_DB": DATABASE, "API_PORT": str(API_PORT)}
     process = subprocess.Popen(
         "npx tsx src/server.ts",

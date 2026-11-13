@@ -63,6 +63,7 @@ data/raw/       PhilGEPS downloads (gitignored, protected)
 data/processed/ derived files (gitignored)
 docs/           manuscript and project documents
 tests/e2e/      one dataset through every layer
+.github/        CI: ruff, pytest, eslint, typecheck, vitest, e2e on PostgreSQL
 .claude/        agents, skills, hooks
 ```
 
