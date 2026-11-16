@@ -1,8 +1,17 @@
 from contextlib import nullcontext
 
+import pytest
 import requests
 
-from pipeline.notices import Notice, collect, parse_notice, targets
+from pipeline.notices import (
+    EXPORT_COLUMNS,
+    Notice,
+    collect,
+    in_part,
+    parse_notice,
+    read_export,
+    targets,
+)
 
 PAGE = """
 <span id="lblDisplayReferenceNo" class="DisplayText5">11214813</span>
@@ -132,3 +141,47 @@ def test_stops_on_a_long_run_of_missing_pages():
 
     assert counts["stopped_early"] is True
     assert len(session.fetched) == 10
+
+
+def test_split_gives_every_notice_to_exactly_one_person():
+    references = [str(n) for n in range(10_000_000, 10_002_000)]
+
+    first = {r for r in references if in_part(r, 1, 2)}
+    second = {r for r in references if in_part(r, 2, 2)}
+
+    assert first | second == set(references)
+    assert not first & second
+    # Roughly even, so both people finish at about the same time.
+    assert 900 < len(first) < 1100
+
+
+def test_split_does_not_depend_on_order():
+    assert in_part("11214813", 1, 2) == in_part("11214813", 1, 2)
+    assert [in_part(r, 1, 2) for r in ["3", "2", "1"]] == [
+        in_part(r, 1, 2) for r in reversed(["1", "2", "3"])
+    ]
+
+
+def test_export_can_be_read_back(tmp_path):
+    path = tmp_path / "part1.csv"
+    path.write_text(
+        ",".join(EXPORT_COLUMNS) + "\n"
+        "legacy,100,ok,4,2,Awarded,2026-11-16T12:00:00+00:00\n"
+        "legacy,101,not_found,,,,2026-11-16T12:00:02+00:00\n",
+        encoding="utf-8",
+    )
+
+    rows = read_export(path)
+
+    assert rows[0]["document_request_count"] == 4
+    assert rows[0]["bid_supplement_count"] == 2
+    assert rows[1]["document_request_count"] is None
+    assert rows[1]["notice_status"] is None
+
+
+def test_a_file_that_is_not_an_export_is_refused(tmp_path):
+    path = tmp_path / "other.csv"
+    path.write_text("a,b\n1,2\n", encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        read_export(path)

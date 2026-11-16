@@ -37,6 +37,15 @@ Order for real data: `migrate`, `download`, `load`, `notices`, then score (`ml/R
 
 `notices` fetches 100 notices per run by default, two seconds apart, and stores each result in `bid_notices`. Stored notices are skipped, so it can be stopped and restarted. `--all` fetches every remaining notice; `--refs` fetches named references. It stops by itself if the site fails repeatedly.
 
+**Splitting the scrape between two people.** Each person needs the same `data/raw/` downloads (check `manifest.json`). Each runs one half, at the usual pace, never more than one copy each:
+
+```
+.venv\Scripts\python -m pipeline.notices --all --part 1 --of 2     (first person)
+.venv\Scripts\python -m pipeline.notices --all --part 2 --of 2     (second person)
+```
+
+A notice's half depends only on its reference number: for 2024 that is 40,200 and 40,222 notices. Results stay in each person's own database, so share them as files. `--export data/notices/part1.csv` writes every stored notice (reference, status and counts only, no names), which can be committed. `--import data/notices/part2.csv` adds a partner's export and keeps any notice already stored. Import both halves into the database that will be scored.
+
 `load` keeps awarded civil works contracts only, one per award. Every row left out is counted by reason, and the counts are stored in `load_reports` for the dashboard's data quality page. Missing or unreadable values stay missing. It refuses to run while demonstration contracts are in the database.
 
 `demo` writes generated contracts. Nothing in it describes a real organization. Score them with `python -m ml.score`. Run `python -m pipeline.demo --clear` before loading real data.
