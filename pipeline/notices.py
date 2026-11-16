@@ -268,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.export or args.import_paths:
-        with connect() as connection:
+        with connect(autocommit=True) as connection:
             for path in args.import_paths or ():
                 added, kept = import_notices(connection, path)
                 print(f"{path}: added {added:,}, already stored {kept:,}")
@@ -294,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
             all_references = references
             references = (r for r in all_references if in_part(r, args.part, args.of))
 
-    with connect() as connection:
+    with connect(autocommit=True) as connection:
         counts = collect(
             connection,
             references,
