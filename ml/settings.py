@@ -88,6 +88,11 @@ SENSITIVITY_VARIANTS: tuple[tuple[str, dict], ...] = (
     # Smallest entity for the repeated-winner share.
     ("min_entity_3", {"min_entity_awards": 3}),
     ("min_entity_10", {"min_entity_awards": 10}),
+    # Contract splitting: the window, and the ceiling the grouped budgets must exceed.
+    ("splitting_window_15d", {"splitting_window_days": 15}),
+    ("splitting_window_60d", {"splitting_window_days": 60}),
+    ("splitting_ceiling_500k", {"splitting_ceiling": 500_000}),
+    ("splitting_ceiling_2m", {"splitting_ceiling": 2_000_000}),
 )
 
 # Seeds for the Isolation Forest seed-stability check; the default seed is compared with each.
