@@ -84,7 +84,7 @@ These compare two scorings of the same contracts. They say how much a result dep
 
 Few document requests is the main reason for no flagged contract because a low count is common: 31% of notices had at most one request (the median is 3), and the Isolation Forest isolates rare combinations, so a value shared by a third of contracts is not unusual on its own. It still adds points where it combines with other indicators.
 
-Sensitivity, Isolation Forest (87 s):
+Sensitivity, Isolation Forest (82 s):
 
 | Alternative | Flagged | Flagged Jaccard | Default flags kept | Top 100 | Top 500 | Spearman |
 |---|---|---|---|---|---|---|
@@ -98,8 +98,12 @@ Sensitivity, Isolation Forest (87 s):
 | Smallest comparable group 100 | 4,511 | 0.979 | 0.989 | 0.97 | 0.948 | 0.998 |
 | Smallest entity 3 bid notices | 4,513 | 0.781 | 0.877 | 0.90 | 0.932 | 0.961 |
 | Smallest entity 10 bid notices | 4,512 | 0.725 | 0.841 | 0.70 | 0.822 | 0.958 |
+| Splitting window 15 days | 4,511 | 0.858 | 0.924 | 0.78 | 0.838 | 0.990 |
+| Splitting window 60 days | 4,511 | 0.871 | 0.931 | 0.50 | 0.836 | 0.985 |
+| Splitting ceiling PHP 500,000 | 4,511 | 0.899 | 0.947 | 1.00 | 0.930 | 0.984 |
+| Splitting ceiling PHP 2,000,000 | 4,511 | 0.830 | 0.907 | 0.87 | 0.744 | 0.971 |
 
-As before, the share flagged moves only the cut-off and the smallest comparable group barely matters. Budget bands and the smallest entity for repeated winner move the most: each keeps 84% to 90% of the default's flags.
+As before, the share flagged moves only the cut-off and the smallest comparable group barely matters. Budget bands and the smallest entity for repeated winner move the most: each keeps 84% to 90% of the default's flags. The splitting window and ceiling keep 91% to 95%; a 60-day window reshuffles the very top (top 100 overlap 0.50) because more small-value groups reach the top of the ranking.
 
 Seed stability, Isolation Forest, 10 seeds (26 s). Default seed 2024 against the 9 others: flagged Jaccard 0.824 to 0.895, default flags kept 0.905 to 0.946, top 100 overlap 0.73 to 0.97, Spearman 0.990 to 0.994. Over all 45 pairs of seeds (min / mean / max):
 
