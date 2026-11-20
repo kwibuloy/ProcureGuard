@@ -185,3 +185,37 @@ def test_a_file_that_is_not_an_export_is_refused(tmp_path):
 
     with pytest.raises(ValueError):
         read_export(path)
+
+
+def test_refresh_stops_at_the_first_failed_step(monkeypatch):
+    import subprocess
+
+    from pipeline import refresh
+
+    ran = []
+
+    def fake_run(command, check):
+        ran.append(command[2])
+        return subprocess.CompletedProcess(command, 1 if command[2] == "pipeline.load" else 0)
+
+    monkeypatch.setattr(refresh.subprocess, "run", fake_run)
+
+    assert refresh.main([]) == 1
+    assert ran == ["pipeline.migrate", "pipeline.download", "pipeline.load"]
+
+
+def test_refresh_can_skip_the_scrape(monkeypatch):
+    import subprocess
+
+    from pipeline import refresh
+
+    ran = []
+    monkeypatch.setattr(
+        refresh.subprocess,
+        "run",
+        lambda command, check: ran.append(command[2]) or subprocess.CompletedProcess(command, 0),
+    )
+
+    assert refresh.main(["--no-scrape"]) == 0
+    assert "pipeline.notices" not in ran
+    assert ran[-1] == "ml.score"

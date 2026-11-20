@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { noticeSummary } from '../amounts';
+import { REVIEW_LABELS, type ReviewStatus } from '../reviews';
 import type { ContractRow } from '../api';
 import { formatDate, formatPeso, toPoints } from '../format';
 import { profileLink } from '../links';
@@ -17,7 +18,8 @@ interface Props {
   openId?: number | null;
   /** Row highlighted by keyboard navigation. */
   cursorId?: number | null;
-  reviewed?: ReadonlySet<number>;
+  /** Latest review status of each row's contract, shared by every visitor. */
+  statuses?: ReadonlyMap<number, ReviewStatus>;
   /** Hide a column when every row would say the same thing. */
   hide?: 'entity' | 'awardee';
   /** The reader's view settings; the profile pages use the defaults. */
@@ -32,7 +34,7 @@ export function ContractTable({
   contractLink,
   openId,
   cursorId,
-  reviewed,
+  statuses,
   hide,
   view,
   loading,
@@ -81,7 +83,8 @@ export function ContractTable({
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const isReviewed = reviewed?.has(row.id) ?? false;
+            const status = statuses?.get(row.id);
+            const isReviewed = Boolean(status && status !== 'not_reviewed');
             const notice = grouped ? noticeSummary(row) : null;
             const classes = [
               row.id === openId && 'is-open',
@@ -99,7 +102,10 @@ export function ContractTable({
                 {shows('rank') && (
                   <td className="col-rank">
                     {isReviewed ? (
-                      <span className="reviewed-mark" title="Marked as reviewed in this browser">
+                      <span
+                        className={`reviewed-mark is-${status}`}
+                        title={status ? REVIEW_LABELS[status] : undefined}
+                      >
                         <Icon name="check" size={14} />
                         <span className="visually-hidden">Reviewed. Rank </span>
                         {row.rank}
@@ -113,6 +119,14 @@ export function ContractTable({
                   <Link to={contractLink(row.id)} className="row-link">
                     {row.title}
                   </Link>
+                  {row.isNew && (
+                    <span
+                      className="badge-new"
+                      title="Flagged in this scoring run, not in the one before"
+                    >
+                      New
+                    </span>
+                  )}
                   <span className="cell-sub">
                     {row.awardReference} · Awarded {formatDate(row.awardDate)}
                     {notice && ` · ${notice.others}`}

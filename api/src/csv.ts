@@ -26,11 +26,16 @@ export function toCsv(rows: Record<string, unknown>[]): string {
 export function toCsvWithin(
   rows: Record<string, unknown>[],
   maxBytes: number,
+  preamble: string[] = [],
 ): { csv: string; written: number } {
   const first = rows[0];
-  if (!first) return { csv: '', written: 0 };
+  if (!first)
+    return {
+      csv: preamble.length ? `${BOM}${preamble.map(cell).join('\r\n')}\r\n` : '',
+      written: 0,
+    };
   const header = Object.keys(first);
-  const lines = [`${BOM}${header.join(',')}\r\n`];
+  const lines = [`${BOM}${[...preamble.map(cell), header.join(',')].join('\r\n')}\r\n`];
   let bytes = Buffer.byteLength(lines[0]!);
   let written = 0;
   for (const row of rows) {

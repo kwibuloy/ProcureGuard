@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { amountFacts } from '../amounts';
 import { useApi, withRun, type ContractDetail } from '../api';
 import { ContributionChart } from '../components/ContributionChart';
+import { PricePeers } from '../components/PricePeers';
+import { ReviewSection } from '../components/ReviewSection';
 import { Icon } from '../components/Icon';
 import { ScoreMeter } from '../components/ScoreMeter';
 import { Notice } from '../components/States';
@@ -19,12 +21,29 @@ import {
 } from '../format';
 import { profileLink } from '../links';
 import { useOverview } from '../overview';
-import { useReviewed } from '../reviewed';
 
 const NOTICE_URL =
   'https://notices.philgeps.gov.ph/GEPSNONPILOT/Tender/PrintableBidNoticeAbstractUI.aspx?refID=';
 
 const wholeNumber = (value: number) => String(Math.round(value));
+
+/** Where replies to a flag go. Set VITE_RESPONSE_EMAIL when building the dashboard. */
+const RESPONSE_EMAIL = (import.meta.env.VITE_RESPONSE_EMAIL as string | undefined)?.trim() ?? '';
+
+export function responseLink(contract: { awardReference: string; title: string }, page: string) {
+  if (!RESPONSE_EMAIL) return null;
+  const subject = `Response to ProcureGuard flag: award ${contract.awardReference}`;
+  const body = [
+    `Contract: ${contract.title}`,
+    `Award reference: ${contract.awardReference}`,
+    `Page: ${page}`,
+    '',
+    'Organization:',
+    'Your name and position:',
+    'Your response (records or context that explain the pattern):',
+  ].join('\n');
+  return `mailto:${RESPONSE_EMAIL}?${new URLSearchParams({ subject, body }).toString().replaceAll('+', '%20')}`;
+}
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -47,8 +66,12 @@ function Detail({ contract }: { contract: ContractDetail }) {
   return (
     <>
       <p className="print-only print-header">
-        ProcureGuard contract summary · {run?.modelName} · printed{' '}
-        {formatDate(new Date().toISOString())}
+        ProcureGuard contract summary · scoring run {run?.id} ({run?.modelName},{' '}
+        {formatDate(run?.createdAt ?? null)}) · printed {formatDate(new Date().toISOString())}
+      </p>
+      <p className="print-only print-disclaimer">
+        A flag means this contract is statistically unusual and warrants human review. It is not
+        evidence of corruption, fraud or bid rigging by any person or organization.
       </p>
       <p className="eyebrow">
         Rank {formatCount(contract.rank)} of {formatCount(contract.scoredContracts)}
@@ -93,6 +116,10 @@ function Detail({ contract }: { contract: ContractDetail }) {
         />
       </section>
 
+      <PricePeers contractId={contract.id} runId={run?.id ?? null} />
+
+      <ReviewSection contractId={contract.id} runId={run?.id ?? null} />
+
       <section>
         <h3>Contract</h3>
         <dl className="facts">
@@ -127,6 +154,12 @@ function Detail({ contract }: { contract: ContractDetail }) {
             {amounts.amountNote && <span className="fact-sub">{amounts.amountNote}</span>}
           </Fact>
           <Fact label="Procurement mode">{contract.procurementMode ?? 'Not published'}</Fact>
+          <Fact label="Scored in">
+            Run {run?.id ?? '…'}
+            <span className="fact-sub">
+              {run ? `${run.modelName}, ${formatDate(run.createdAt)}` : ''}
+            </span>
+          </Fact>
           <Fact label="Document requests">
             {contract.documentRequests === null
               ? 'Not available'
@@ -169,7 +202,6 @@ export function ContractPanel() {
   const overview = useOverview();
   const run = overview.data?.run ?? null;
   const contract = useApi<ContractDetail>(run ? withRun(`/api/contracts/${id}`, run.id) : null);
-  const { reviewed, toggle } = useReviewed();
   const closeButton = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -205,7 +237,7 @@ export function ContractPanel() {
   };
 
   const data = contract.data && !contract.loading ? contract.data : null;
-  const isReviewed = reviewed.has(contractId);
+  const respond = data ? responseLink(data, window.location.href) : null;
   // Only real legacy notices have a public page; demonstration references do not.
   const noticeLink =
     data && !run?.isDemo && data.sourceSeries === 'legacy' && /^\d+$/.test(data.bidReference ?? '')
@@ -299,16 +331,15 @@ export function ContractPanel() {
 
         {data && (
           <div className="panel-foot">
-            <button
-              type="button"
-              className={`button ${isReviewed ? 'button-outline' : ''}`}
-              onClick={() => toggle(contractId)}
-              aria-pressed={isReviewed}
-              title="Saved in this browser only"
-            >
-              <Icon name={isReviewed ? 'check' : 'circle'} />
-              {isReviewed ? 'Reviewed' : 'Mark as reviewed'}
-            </button>
+            {respond && (
+              <a
+                className="button button-outline"
+                href={respond}
+                title="For the procuring entity or the supplier: send records or context that explain this pattern"
+              >
+                Respond to this flag
+              </a>
+            )}
             {noticeLink && (
               <a
                 className="button button-outline"

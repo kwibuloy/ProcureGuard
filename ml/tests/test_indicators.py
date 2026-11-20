@@ -132,6 +132,8 @@ def test_price_deviation_is_measured_from_the_comparable_median():
         "comparable_median_ratio": pytest.approx(0.95),
         "comparable_count": 3,
         "comparable_basis": "same region and budget band",
+        "comparable_band": 1,
+        "comparable_region": "Region I",
         "budget_compared": "approved budget",
         "notice_award_count": 1,
     }
@@ -347,3 +349,13 @@ def test_splitting_is_missing_outside_small_value_procurement():
     assert "award date" in result["context"][1][WHY_MISSING]
     # The model sees no sign of splitting for either.
     assert model_features(compute(frame, SETTINGS))[CONTRACT_SPLITTING].tolist() == [0.0, 0.0]
+
+
+def test_price_context_names_the_comparable_group():
+    frame = contracts([{"contract_amount": 1_900_000.0}] * 3)
+
+    context = price_deviation(frame, SETTINGS)["context"][0]
+
+    assert context["comparable_basis"] == "same region and budget band"
+    assert context["comparable_band"] == 1  # 1M to 5M
+    assert context["comparable_region"] == "Region I"

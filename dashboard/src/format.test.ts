@@ -1,3 +1,4 @@
+import { fillMonths } from './components/MonthBars';
 import { describe, expect, it } from 'vitest';
 import {
   daysBetween,
@@ -54,5 +55,22 @@ describe('dates and counts', () => {
   it('uses the singular for one', () => {
     expect(plural(1, 'supplier')).toBe('1 supplier');
     expect(plural(2, 'supplier')).toBe('2 suppliers');
+  });
+});
+
+describe('fillMonths', () => {
+  it('fills the months with no awards, across a year end', () => {
+    const filled = fillMonths([
+      { month: '2024-11', contracts: 2, flagged: 1 },
+      { month: '2025-02', contracts: 1, flagged: 0 },
+    ]);
+
+    expect(filled.map((month) => month.month)).toEqual([
+      '2024-11',
+      '2024-12',
+      '2025-01',
+      '2025-02',
+    ]);
+    expect(filled[1]).toEqual({ month: '2024-12', contracts: 0, flagged: 0 });
   });
 });

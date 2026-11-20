@@ -29,6 +29,8 @@ Run from the repo root with the virtual environment's Python.
 | Clean, standardize, collapse to contracts and load PostgreSQL | `python -m pipeline.load` |
 | Report data quality from the database | `python -m pipeline.quality` |
 | Collect document request counts from notice pages | `python -m pipeline.notices` |
+| Every step at once when a new quarter is out: migrate, download, load, notices, score | `python -m pipeline.refresh` (`--no-scrape` to skip notices) |
+| Load the committed counts instead of scraping | `python -m pipeline.notices --import data/notices/bid_notices_2024.csv` |
 | Load demonstration contracts for the dashboard | `python -m pipeline.demo` |
 
 Order for real data: `migrate`, `download`, `load`, `notices`, then score (`ml/README.md`).

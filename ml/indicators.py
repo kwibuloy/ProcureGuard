@@ -143,8 +143,29 @@ def price_deviation(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
     deviation = ratio / median - 1
     context = []
     awards = contracts.get("notice_award_count", pd.Series(1, index=contracts.index)).fillna(1)
-    for own, mid, size, label, is_repeated, is_implausible, is_partial, award_count in zip(
-        ratio, median, count, basis, repeated, implausible, partial, awards, strict=True
+    for (
+        own,
+        mid,
+        size,
+        label,
+        is_repeated,
+        is_implausible,
+        is_partial,
+        award_count,
+        band,
+        region,
+    ) in zip(
+        ratio,
+        median,
+        count,
+        basis,
+        repeated,
+        implausible,
+        partial,
+        awards,
+        frame["band"],
+        frame["region"],
+        strict=True,
     ):
         if is_implausible and not is_repeated:
             context.append(
@@ -170,6 +191,13 @@ def price_deviation(contracts: pd.DataFrame, settings: Settings) -> pd.DataFrame
                     "comparable_median_ratio": float(mid),
                     "comparable_count": int(size),
                     "comparable_basis": label,
+                    # Which group, so the dashboard can show where this price sits in it.
+                    **({"comparable_band": int(band)} if label != "all scored contracts" else {}),
+                    **(
+                        {"comparable_region": region}
+                        if label == "same region and budget band"
+                        else {}
+                    ),
                     "budget_compared": "budget of the awarded line items"
                     if is_partial
                     else "approved budget",

@@ -18,12 +18,13 @@ With no real data yet, load and score demonstration contracts from the repo root
 
 ## Screens
 
-| Route                                             | Screen                                                                                                                                                                              |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                               | Contracts: summary, score histogram, main reasons, map by place, filterable ranked table, CSV export                                                                                |
-| `/contracts/:id`                                  | Side panel over the queue explaining one contract's score; prints as a one-page summary                                                                                             |
-| `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won                                                                                                                         |
-| `/about`                                          | Common questions, how ProcureGuard works (what a flag means, the four indicators, the score, limits), and the data quality figures. `/data` and `/method` redirect to its sections |
+| Route                                             | Screen                                                                                                                                                                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                               | Contracts: summary, score histogram, main reasons, map by place, filterable ranked table (award period, new flags only), review marks, "New" badges, CSV export                                                                                       |
+| `/contracts/:id`                                  | Side panel over the queue explaining one contract's score: indicators, price compared with similar contracts, review status and history, the scoring run, links to PhilGEPS and to respond by email; prints as a one-page summary with the disclaimer |
+| `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won, with contracts by award month; entities link to a search for their COA audit reports                                                                                                     |
+| `/about`                                          | Common questions, how ProcureGuard works (what a flag means, the four indicators, the score, limits), and the data quality figures. `/data` and `/method` redirect to its sections                                                                    |
+| `/signin`                                         | Sign-in for the review team. Viewing never needs an account                                                                                                                                                                                           |
 
 Filters, sort order and page live in the URL, so a filtered view can be shared as a link. View settings (grouping lots by notice, hidden columns, compact rows) also live in the URL and are saved in the browser; a link that carries settings wins over the saved ones. The scoring run on screen is chosen in the header and lasts for the browser session.
 
@@ -72,3 +73,7 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+## Build settings
+
+`VITE_RESPONSE_EMAIL`: the address "Respond to this flag" opens an email to. Read at build time, so set it in the Vercel project settings and redeploy; the link is hidden while it is unset.

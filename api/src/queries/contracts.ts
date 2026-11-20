@@ -4,6 +4,7 @@ import {
   GROUPED_SORTS,
   INDICATORS,
   NOTICE_KEY,
+  previousRunId,
   REASONS,
   SORTS,
   type Db,
@@ -11,10 +12,16 @@ import {
   type Sort,
 } from './shared.js';
 
-const LIST_FROM = `
+/** `previous` is a run id read from the database (an integer), or null for none. */
+const listFrom = (previous: number | null) => `
   FROM contract_scores s
   JOIN contracts c ON c.id = s.contract_id
-  LEFT JOIN (${REASONS}) r ON r.contract_id = c.id`;
+  LEFT JOIN (${REASONS}) r ON r.contract_id = c.id
+  LEFT JOIN contract_scores prev
+    ON prev.contract_id = c.id AND prev.run_id = ${Number.isInteger(previous) ? previous : 'NULL'}`;
+
+/** Flagged in this run, and not flagged (or not yet scored) in the previous one. */
+const IS_NEW = `(s.is_flagged AND NOT COALESCE(prev.is_flagged, FALSE))`;
 
 /**
  * One row per contract, or when `grouped`, one row per bid notice: a notice
@@ -22,6 +29,8 @@ const LIST_FROM = `
  * awards the notice has and their total, so ten lots do not fill ten rows.
  */
 export async function listContracts(db: Db, runId: number, filters: ListFilters) {
+  const previous = await previousRunId(db, runId);
+  const LIST_FROM = listFrom(previous);
   const terms = await resolveSearch(db, filters.q);
   const { where, params } = contractFilter(runId, filters, terms);
   params.push(filters.pageSize, (filters.page - 1) * filters.pageSize);
@@ -35,7 +44,8 @@ export async function listContracts(db: Db, runId: number, filters: ListFilters)
                 AS "matchedContracts"
        FROM (
          SELECT c.id::int AS id, s.score_rank AS rank, s.risk_score AS score,
-                s.is_flagged AS flagged, c.title, c.award_reference_no AS "awardReference",
+                s.is_flagged AS flagged, ${IS_NEW} AS "isNew",
+                c.title, c.award_reference_no AS "awardReference",
                 c.procuring_entity AS entity, c.procuring_entity_raw AS "entityName", c.region,
                 c.awardee, c.awardee_raw AS "awardeeName",
                 c.contract_amount::float8 AS amount, c.approved_budget::float8 AS budget,
@@ -123,10 +133,11 @@ export async function exportContracts(
   filters: ContractFilters & { sort: Sort },
   limit: number,
 ) {
+  const LIST_FROM = listFrom(await previousRunId(db, runId));
   const { where, params } = contractFilter(runId, filters, await resolveSearch(db, filters.q));
   const { rows } = await db.query(
     `SELECT s.score_rank AS rank, round((s.risk_score * 100)::numeric, 1)::float8 AS score,
-            s.is_flagged AS flagged, r.main_reason AS main_reason,
+            s.is_flagged AS flagged, ${IS_NEW} AS newly_flagged, r.main_reason AS main_reason,
             c.award_reference_no, c.bid_reference_no, c.title,
             c.procuring_entity_raw AS procuring_entity, c.region,
             c.awardee_raw AS awardee, c.procurement_mode,

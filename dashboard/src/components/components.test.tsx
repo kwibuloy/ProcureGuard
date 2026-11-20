@@ -97,10 +97,22 @@ describe('ContractTable', () => {
     expect(screen.getByText('Nothing stands out')).toBeInTheDocument();
   });
 
-  it('marks a contract the reviewer has already reviewed', () => {
-    table({ reviewed: new Set([7]) });
+  it('marks a reviewed contract with its shared review status', () => {
+    table({ statuses: new Map([[7, 'needs_follow_up' as const]]) });
 
-    expect(screen.getByTitle('Marked as reviewed in this browser')).toBeInTheDocument();
+    expect(screen.getByTitle('Reviewed: needs follow-up')).toBeInTheDocument();
+  });
+
+  it('does not mark a contract whose review was withdrawn', () => {
+    table({ statuses: new Map([[7, 'not_reviewed' as const]]) });
+
+    expect(screen.queryByTitle('Not reviewed')).toBeNull();
+  });
+
+  it('marks a flag that is new in this run', () => {
+    table({ rows: [{ ...ROW, isNew: true }] });
+
+    expect(screen.getByText('New')).toBeInTheDocument();
   });
 
   it('leaves out the column that would repeat the page subject', () => {

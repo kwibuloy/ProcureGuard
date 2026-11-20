@@ -78,7 +78,35 @@ function Questions() {
         <Question title="Can I share what I am looking at?">
           <p>
             Yes. Filters, search, sort order and view settings are part of the page address, so a
-            copied link opens the same view. “Mark as reviewed” is saved only in your browser.
+            copied link opens the same view. Every exported file and printed summary starts with a
+            note that a flag is not evidence of wrongdoing.
+          </p>
+        </Question>
+        <Question title="Who reviews flagged contracts?">
+          <p>
+            The ProcureGuard team. A reviewer checks a flagged contract against the public records
+            and records one of two outcomes: “explained”, when an ordinary reason was found, or
+            “needs follow-up”, when the records available could not explain the pattern. Neither is
+            a finding about any person. Every review is kept with the reviewer’s name and date, so
+            the history stays visible.
+          </p>
+        </Question>
+        <Question title="I represent a procuring entity or supplier. How do I respond?">
+          <p>
+            Use “Respond to this flag” on the contract’s page to email the team with records or
+            context. A reply is shown on the page only after the team has confirmed it came from the
+            organization.
+          </p>
+        </Question>
+        <Question title="How do I follow new flags?">
+          <p>
+            Contracts flagged in the latest scoring run that the run before did not flag are marked
+            “New”, and listed in an{' '}
+            <a href="/api/feed.xml" className="text-link">
+              RSS feed
+            </a>{' '}
+            that any feed reader can follow. Add <code>?region=</code> and a region name to the feed
+            address to follow one region.
           </p>
         </Question>
       </div>

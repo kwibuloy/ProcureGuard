@@ -157,3 +157,44 @@ describe('GET /api/profile', () => {
     expect(params).toEqual([8, "O'Brien; DROP TABLE contracts"]);
   });
 });
+
+describe('the new-flags feed', () => {
+  it('escapes published text and says a flag is not a finding', async () => {
+    const { db } = fakeDb([
+      {
+        id: 4,
+        title: 'Road <b>& bridge</b>',
+        entityName: 'Town "A"',
+        awardeeName: 'Builder & Co',
+        region: 'Region I',
+        score: 0.91,
+        rank: 2,
+      },
+    ]);
+
+    const response = await request(createApp(db)).get('/api/feed.xml');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/rss+xml');
+    expect(response.text).toContain('Road &lt;b&gt;&amp; bridge&lt;/b&gt;');
+    expect(response.text).not.toContain('<b>');
+    expect(response.text).toContain('not evidence of wrongdoing');
+    expect(response.text).toContain('/contracts/4</link>');
+  });
+});
+
+describe('list filters for dates and new flags', () => {
+  it('passes award dates as parameters and ignores a malformed one', async () => {
+    const { db, query } = fakeDb();
+
+    await request(createApp(db))
+      .get('/api/contracts')
+      .query({ awardFrom: '2024-03-01', awardTo: '2024-13-45; DROP', new: 'true' });
+
+    const [sql, params] = query.mock.calls.find(([text]) => text.includes('award_date >='))!;
+    expect(params).toContain('2024-03-01');
+    expect(sql).not.toContain('award_date <=');
+    expect(sql).not.toContain('DROP');
+    expect(sql).toContain('NOT COALESCE(prev.is_flagged, FALSE)');
+  });
+});

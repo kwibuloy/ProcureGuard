@@ -78,37 +78,39 @@ What each column means (`ml/robustness.py`):
 
 These compare two scorings of the same contracts. They say how much a result depends on a choice, not whether a flag is right: no labelled cases exist to say that.
 
-### Measured on the 2024 data (13 November 2026)
+### Measured on the 2024 data (21 November 2026)
 
-90,204 contracts (those `ml/data.py` loads for the study period), the same set and settings as stored run 24, which the default reproduces (4,511 flagged in both). Only 103 notices have a document request count, so the document-request indicator is missing for nearly every contract and is replaced by its median; the figures below therefore mostly reflect the other two indicators, and need re-running after the document request scrape.
+90,204 contracts, four indicators, with document request counts for all 80,422 public bidding notices (82,715 contracts). The default settings reproduce stored runs 26 and 27 (4,511 flagged). Main reason among flagged contracts: unusual price 2,031, repeated winner 1,545, grouped small-value awards 935, few document requests 0.
 
-Sensitivity, Isolation Forest (29 s):
+Few document requests is the main reason for no flagged contract because a low count is common: 31% of notices had at most one request (the median is 3), and the Isolation Forest isolates rare combinations, so a value shared by a third of contracts is not unusual on its own. It still adds points where it combines with other indicators.
+
+Sensitivity, Isolation Forest (87 s):
 
 | Alternative | Flagged | Flagged Jaccard | Default flags kept | Top 100 | Top 500 | Spearman |
 |---|---|---|---|---|---|---|
-| Bands 5M, 50M (coarser) | 4,511 | 0.710 | 0.830 | 0.36 | 0.702 | 0.969 |
-| Bands 0.5M to 50M, 7 edges (finer) | 4,511 | 0.802 | 0.890 | 0.87 | 0.938 | 0.975 |
-| Bands with an extra edge at 100M | 4,511 | 0.873 | 0.932 | 0.67 | 0.742 | 0.991 |
-| 3% flagged | 2,708 | 0.600 | 0.600 | 1.00 | 1.000 | 1.000 |
+| Bands 5M, 50M (coarser) | 4,511 | 0.748 | 0.856 | 0.65 | 0.778 | 0.978 |
+| Bands 0.5M to 50M, 7 edges (finer) | 4,511 | 0.756 | 0.861 | 0.93 | 0.882 | 0.983 |
+| Bands with an extra edge at 100M | 4,511 | 0.820 | 0.901 | 0.79 | 0.896 | 0.992 |
+| 3% flagged | 2,707 | 0.600 | 0.600 | 1.00 | 1.000 | 1.000 |
 | 10% flagged | 9,021 | 0.500 | 1.000 | 1.00 | 1.000 | 1.000 |
 | Smallest comparable group 15 | 4,511 | 1.000 | 1.000 | 1.00 | 1.000 | 1.000 |
-| Smallest comparable group 50 | 4,512 | 0.997 | 0.998 | 1.00 | 0.998 | 0.999 |
-| Smallest comparable group 100 | 4,512 | 0.991 | 0.995 | 0.95 | 0.996 | 0.998 |
-| Smallest entity 3 bid notices | 5,107 | 0.794 | 0.944 | 0.88 | 0.956 | 0.943 |
-| Smallest entity 10 bid notices | 4,518 | 0.729 | 0.844 | 0.55 | 0.762 | 0.938 |
+| Smallest comparable group 50 | 4,511 | 0.995 | 0.998 | 1.00 | 0.978 | 1.000 |
+| Smallest comparable group 100 | 4,511 | 0.979 | 0.989 | 0.97 | 0.948 | 0.998 |
+| Smallest entity 3 bid notices | 4,513 | 0.781 | 0.877 | 0.90 | 0.932 | 0.961 |
+| Smallest entity 10 bid notices | 4,512 | 0.725 | 0.841 | 0.70 | 0.822 | 0.958 |
 
-The share flagged changes only the cut-off, so the ranking is unchanged (Spearman 1.000); with 3% every flag is one of the default's, with 10% every default flag stays. The smallest comparable group barely matters between 15 and 100. Budget bands and the smallest entity move the most: with coarser bands 17% of the default's flags change and only 36 of the top 100 stay. With a smallest entity of 3, more contracts share the flagging score, so 5,107 are flagged instead of 4,511.
+As before, the share flagged moves only the cut-off and the smallest comparable group barely matters. Budget bands and the smallest entity for repeated winner move the most: each keeps 84% to 90% of the default's flags.
 
-Seed stability, Isolation Forest, 10 seeds (42 s). Default seed 2024 against the 9 others: flagged Jaccard 0.888 to 0.944, top 100 overlap 0.37 to 0.68, top 500 overlap 0.650 to 0.928, Spearman 0.986 to 0.993. Over all 45 pairs of seeds (min / mean / max):
+Seed stability, Isolation Forest, 10 seeds (26 s). Default seed 2024 against the 9 others: flagged Jaccard 0.824 to 0.895, default flags kept 0.905 to 0.946, top 100 overlap 0.73 to 0.97, Spearman 0.990 to 0.994. Over all 45 pairs of seeds (min / mean / max):
 
 | Measure | Min | Mean | Max |
 |---|---|---|---|
-| Flagged Jaccard | 0.834 | 0.905 | 0.946 |
-| Top 100 overlap | 0.37 | 0.775 | 0.99 |
-| Top 500 overlap | 0.650 | 0.866 | 0.952 |
-| Spearman | 0.982 | 0.989 | 0.995 |
+| Flagged Jaccard | 0.809 | 0.864 | 0.910 |
+| Top 100 overlap | 0.61 | 0.848 | 0.99 |
+| Top 500 overlap | 0.762 | 0.874 | 0.938 |
+| Spearman | 0.987 | 0.992 | 0.995 |
 
-So the overall ranking hardly depends on the seed, and about nine in ten flags are the same whichever seed is used, but which contracts make the top 100 does depend on it. A reviewer should not read much into the difference between rank 40 and rank 140. Whether to respond (more trees, or averaging scores over seeds) is a study decision; nothing has been changed.
+The overall ranking hardly depends on the seed, and about nine in ten flags stay whichever seed is used; the top 100 is steadier than with three indicators (mean overlap 0.85, was 0.78). The difference between rank 40 and rank 140 still should not be read as meaningful.
 
 ## Tests
 
