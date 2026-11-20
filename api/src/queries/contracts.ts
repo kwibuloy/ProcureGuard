@@ -138,7 +138,9 @@ export async function exportContracts(
             round(((r.contributions->>'repeated_winner')::numeric * 100), 2)::float8
               AS points_repeated_winner,
             round(((r.contributions->>'price_deviation')::numeric * 100), 2)::float8
-              AS points_unusual_price
+              AS points_unusual_price,
+            round(((r.contributions->>'contract_splitting')::numeric * 100), 2)::float8
+              AS points_small_value_awards_grouped
      ${LIST_FROM}
      WHERE ${where}
      ORDER BY ${SORTS[filters.sort]}
@@ -181,28 +183,14 @@ export async function contractDetail(db: Db, runId: number, contractId: number) 
   );
   if (!rows[0]) return null;
 
-  const [indicators, otherRuns] = await Promise.all([
-    db.query(
-      `SELECT indicator, value, contribution, context
-       FROM contract_indicators WHERE run_id = $1 AND contract_id = $2`,
-      [runId, contractId],
-    ),
-    // How each other model scored the same contract, in its latest run only.
-    db.query(
-      `SELECT DISTINCT ON (r.model_name)
-              r.id::int AS "runId", r.model_name AS "modelName", s.risk_score AS score,
-              s.score_rank AS rank, s.is_flagged AS flagged
-       FROM contract_scores s JOIN scoring_runs r ON r.id = s.run_id
-       WHERE s.contract_id = $2
-         AND r.model_name <> (SELECT model_name FROM scoring_runs WHERE id = $1)
-       ORDER BY r.model_name, r.id DESC`,
-      [runId, contractId],
-    ),
-  ]);
+  const indicators = await db.query(
+    `SELECT indicator, value, contribution, context
+     FROM contract_indicators WHERE run_id = $1 AND contract_id = $2`,
+    [runId, contractId],
+  );
   const byName = new Map(indicators.rows.map((row) => [row.indicator, row]));
   return {
     ...rows[0],
     indicators: INDICATORS.filter((name) => byName.has(name)).map((name) => byName.get(name)),
-    otherRuns: otherRuns.rows,
   };
 }

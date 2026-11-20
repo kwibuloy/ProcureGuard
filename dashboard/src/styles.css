@@ -1981,36 +1981,6 @@ kbd {
   animation: pop 320ms var(--ease) backwards 260ms;
 }
 
-.other-runs {
-  margin-top: 10px;
-}
-
-.other-runs li {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.other-run-name {
-  font-weight: 550;
-}
-
-.other-run-score {
-  margin-left: auto;
-  font-size: 16px;
-  font-weight: 660;
-  font-variant-numeric: tabular-nums;
-}
-
-.other-run-note {
-  min-width: 150px;
-  color: var(--ink-2);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
 /* Contributions */
 
 .contributions {
@@ -2512,16 +2482,6 @@ kbd {
   margin: 0;
   color: var(--ink-3);
   font-size: 12px;
-}
-
-.col-share {
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.queue-table th.col-share {
-  text-align: right;
 }
 
 .is-compact .queue-table td {
@@ -3438,10 +3398,6 @@ kbd {
   }
 
   .queue-table .col-rank,
-  .queue-table .col-share {
-    width: auto;
-  }
-
   .queue-table .col-score .meter {
     display: none;
   }
@@ -3491,18 +3447,6 @@ kbd {
   .queue-table .col-amount .cell-sub {
     margin-top: 0;
     font-size: 11px;
-  }
-
-  .queue-table .col-share {
-    grid-column: 2;
-    grid-row: 3;
-    margin-top: 2px;
-    font-size: 12px;
-    text-align: right;
-  }
-
-  .queue-table .col-share .cell-sub {
-    display: none;
   }
 
   .queue-table .col-reason {

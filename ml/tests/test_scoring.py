@@ -6,7 +6,7 @@ from ml.models import MODELS
 from ml.score import score_contracts
 from ml.settings import INDICATORS, Settings
 
-SETTINGS = Settings(isolation_forest_trees=50, clusters=3, flag_share=0.05)
+SETTINGS = Settings(isolation_forest_trees=50, flag_share=0.05)
 
 
 def features(rows: int = 120) -> pd.DataFrame:
@@ -17,9 +17,10 @@ def features(rows: int = 120) -> pd.DataFrame:
             "single_requester": rng.normal(0.25, 0.03, rows),
             "repeated_winner": rng.normal(0.15, 0.03, rows),
             "price_deviation": rng.normal(0.0, 0.01, rows),
+            "contract_splitting": np.zeros(rows),
         }
     )
-    frame.loc[0] = [1.0, 0.95, -0.4]
+    frame.loc[0] = [1.0, 0.95, -0.4, 3.0]
     return frame[list(INDICATORS)]
 
 
@@ -47,7 +48,7 @@ def test_contributions_add_up_to_each_score(model):
 
     rebuilt = result.base_value + result.contributions.sum(axis=1)
     assert rebuilt == pytest.approx(result.scores, abs=1e-9)
-    assert result.contributions.shape == (120, 3)
+    assert result.contributions.shape == (120, 4)
 
 
 @pytest.mark.parametrize("model", list(MODELS))
@@ -66,13 +67,3 @@ def test_same_seed_gives_the_same_scores(model):
 
     assert first.scores == pytest.approx(second.scores)
     assert first.contributions == pytest.approx(second.contributions)
-
-
-def test_clustering_does_not_hide_outliers_in_their_own_cluster():
-    # Five extreme contracts are enough for k-means to give them a cluster of their own.
-    frame = features()
-    frame.loc[:4] = [1.0, 0.95, -0.4]
-
-    result = score_contracts(frame, "clustering", SETTINGS)
-
-    assert set(np.argsort(-result.scores)[:5]) == {0, 1, 2, 3, 4}

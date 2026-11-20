@@ -93,24 +93,6 @@ function Detail({ contract }: { contract: ContractDetail }) {
         />
       </section>
 
-      {contract.otherRuns.length > 0 && (
-        <section>
-          <h3>How the other model scored it</h3>
-          <ul className="other-runs">
-            {contract.otherRuns.map((other) => (
-              <li key={other.runId}>
-                <span className="other-run-name">{other.modelName}</span>
-                <span className="other-run-score">{toPoints(other.score)}</span>
-                <span className="other-run-note">
-                  rank {formatCount(other.rank)}
-                  {other.flagged ? ', flagged' : ', not flagged'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section>
         <h3>Contract</h3>
         <dl className="facts">

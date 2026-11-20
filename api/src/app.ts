@@ -2,7 +2,6 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { toCsvWithin } from './csv.js';
 import { cacheForRun, CACHE_LATEST, rateLimit, securityHeaders, type RateLimit } from './http.js';
 import {
-  compareRuns,
   contractDetail,
   dataQuality,
   dataVersion,
@@ -205,22 +204,6 @@ export function createApp(db: Db, options: AppOptions = {}) {
     const found = name && run ? await profile(db, run.id, kind, name) : null;
     if (!found) return res.status(404).json({ error: 'Not found in this scoring run' });
     res.json(found);
-  });
-
-  app.get('/api/compare', async (req, res) => {
-    const a = positiveInt(req.query.a, 0);
-    const b = positiveInt(req.query.b, 0);
-    const [runA, runB, version] = await Promise.all([
-      findRun(db, a),
-      findRun(db, b),
-      dataVersion(db),
-    ]);
-    if (!a || !b || a === b || runA?.id !== a || runB?.id !== b) {
-      return res.status(400).json({ error: 'Choose two different scoring runs' });
-    }
-    // Both runs are named in the URL, so the comparison never changes.
-    if (cacheForRun(req, res, { pinned: true, version: `${a}-${b}:${version}` })) return;
-    res.json({ a: runA, b: runB, ...(await compareRuns(db, a, b)) });
   });
 
   app.get('/api/places', async (req, res) => {

@@ -84,7 +84,7 @@ function ThemeToggle() {
   );
 }
 
-/** Chooses which model's scoring run every page shows. */
+/** Chooses which scoring run every page shows; earlier runs are kept for the record. */
 function RunPicker({ shownId }: { shownId: number | null }) {
   const { runs, select } = useRuns();
   if (runs.length < 2 || shownId === null) return null;

@@ -26,6 +26,7 @@ const PATHS = {
   single_requester: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
   repeated_winner: 'M17 3l3 3-3 3M4 11V9a3 3 0 0 1 3-3h13M7 21l-3-3 3-3m13-2v2a3 3 0 0 1-3 3H4',
   price_deviation: 'M4 13V5a1 1 0 0 1 1-1h8l7 7-9 9-7-7Zm4.5-4.5h.01',
+  contract_splitting: 'M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

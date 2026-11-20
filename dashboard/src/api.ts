@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export type Indicator = 'single_requester' | 'repeated_winner' | 'price_deviation';
+export type Indicator =
+  'single_requester' | 'repeated_winner' | 'price_deviation' | 'contract_splitting';
 export type Sort = 'rank' | 'amount' | 'recent';
 
 export interface Run {
@@ -81,14 +82,6 @@ export interface IndicatorResult {
   context: Record<string, number | string>;
 }
 
-export interface OtherRunScore {
-  runId: number;
-  modelName: string;
-  score: number;
-  rank: number;
-  flagged: boolean;
-}
-
 export interface ContractDetail {
   id: number;
   title: string;
@@ -123,7 +116,6 @@ export interface ContractDetail {
   scoredContracts: number;
   documentRequests: number | null;
   indicators: IndicatorResult[];
-  otherRuns: OtherRunScore[];
 }
 
 export type ProfileKind = 'entity' | 'awardee';

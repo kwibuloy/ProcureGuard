@@ -4,7 +4,12 @@ import type { Pool } from 'pg';
 /** The minimal part of pg's Pool the API uses, so tests can pass a fake. */
 export type Db = Pick<Pool, 'query'>;
 
-export const INDICATORS = ['single_requester', 'repeated_winner', 'price_deviation'] as const;
+export const INDICATORS = [
+  'single_requester',
+  'repeated_winner',
+  'price_deviation',
+  'contract_splitting',
+] as const;
 export type Indicator = (typeof INDICATORS)[number];
 
 export const SORTS = {

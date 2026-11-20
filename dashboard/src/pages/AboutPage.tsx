@@ -113,10 +113,11 @@ function HowItWorks() {
       </div>
 
       <section>
-        <h3>The three indicators</h3>
+        <h3>The four indicators</h3>
         <p>
-          Each contract is measured on three indicators that the procurement literature and the
-          Philippine Competition Commission associate with weaker competition.
+          Each contract is measured on four indicators that the procurement literature, the
+          Philippine Competition Commission and the procurement rules associate with weaker
+          competition.
         </p>
         <div className="indicator-cards">
           {INDICATOR_ORDER.map((indicator) => (
@@ -139,10 +140,9 @@ function HowItWorks() {
         <p>
           No list of confirmed cases of wrongdoing exists for these contracts, so no model here is
           trained to recognise wrongdoing. The score comes from an Isolation Forest, an unsupervised
-          model that rates a contract by how easily it can be separated from the rest on the three
-          indicators. Scores run from 0 to 100, and the highest-scoring 5 percent are flagged. A
-          second, clustering-based model is scored alongside it so the study can compare the two;
-          its runs can be chosen in the run picker at the top of the page.
+          model that rates a contract by how easily it can be separated from the rest on the four
+          indicators. Scores run from 0 to 100, and the highest-scoring 5 percent are flagged.
+          Earlier scoring runs are kept, and each contract page names the run it was scored in.
         </p>
         <p>
           The explanation beside each score comes from SHAP values, which split a contract’s score

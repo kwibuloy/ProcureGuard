@@ -6,7 +6,7 @@
  * carries settings wins over the saved ones.
  */
 
-export const COLUMNS = ['rank', 'entity', 'awardee', 'amount', 'share', 'why'] as const;
+export const COLUMNS = ['rank', 'entity', 'awardee', 'amount', 'why'] as const;
 export type Column = (typeof COLUMNS)[number];
 
 export const COLUMN_LABELS: Record<Column, string> = {
@@ -14,7 +14,6 @@ export const COLUMN_LABELS: Record<Column, string> = {
   entity: 'Procuring entity',
   awardee: 'Awardee',
   amount: 'Contract amount',
-  share: '% of budget',
   why: 'Why',
 };
 
@@ -24,10 +23,9 @@ export interface ViewSettings {
   compact: boolean;
 }
 
-/** The % of budget column is new, so it starts hidden. */
 export const DEFAULT_VIEW: ViewSettings = {
   grouped: false,
-  hidden: new Set<Column>(['share']),
+  hidden: new Set<Column>(),
   compact: false,
 };
 

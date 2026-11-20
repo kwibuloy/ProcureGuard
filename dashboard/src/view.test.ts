@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_VIEW, readView, viewParams } from './view';
 
 describe('view settings', () => {
-  it('opens ungrouped, with every column but % of budget', () => {
+  it('opens ungrouped, with every column', () => {
     expect(readView(new URLSearchParams())).toEqual(DEFAULT_VIEW);
     expect(viewParams(DEFAULT_VIEW)).toEqual({ group: '', hide: '', compact: '' });
   });
@@ -14,10 +14,8 @@ describe('view settings', () => {
     expect(readView(params)).toEqual(view);
   });
 
-  it('tells "show every column" apart from the default', () => {
-    const all = { ...DEFAULT_VIEW, hidden: new Set<never>() };
-
-    expect(viewParams(all).hide).toBe('none');
+  it('still reads old links that hid the removed % of budget column', () => {
+    expect(readView(new URLSearchParams({ hide: 'share' })).hidden.size).toBe(0);
     expect(readView(new URLSearchParams({ hide: 'none' })).hidden.size).toBe(0);
   });
 

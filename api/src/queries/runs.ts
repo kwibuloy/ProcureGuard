@@ -1,7 +1,5 @@
-/** Scoring runs: listing, choosing one, comparing two. */
+/** Scoring runs: listing and choosing one. */
 import { RUN_COLUMNS, type Db } from './shared.js';
-
-const COMPARE_POINTS = 2_500;
 
 export async function listRuns(db: Db) {
   const { rows } = await db.query(
@@ -12,8 +10,7 @@ export async function listRuns(db: Db) {
   return rows;
 }
 
-// The model the dashboard opens on (team decision; see ml/README.md). The other
-// model stays in the database for comparison.
+// The study's model (team decision; see ml/README.md).
 export const PRIMARY_MODEL = 'Isolation Forest';
 
 /**
@@ -47,55 +44,4 @@ export async function dataVersion(db: Db): Promise<string> {
               (SELECT extract(epoch FROM max(fetched_at))::bigint FROM bid_notices)) AS version`,
   );
   return String(rows[0]?.version ?? '');
-}
-
-/** How two scoring runs rank the contracts they both scored. */
-export async function compareRuns(db: Db, runA: number, runB: number) {
-  const joined = `
-    FROM contract_scores a
-    JOIN contract_scores b ON b.contract_id = a.contract_id AND b.run_id = $2
-    WHERE a.run_id = $1`;
-  const [summary, overlap, points, disagreements] = await Promise.all([
-    db.query(
-      `SELECT count(*)::int AS contracts,
-              count(*) FILTER (WHERE a.is_flagged AND b.is_flagged)::int AS "flaggedByBoth",
-              count(*) FILTER (WHERE a.is_flagged AND NOT b.is_flagged)::int AS "onlyA",
-              count(*) FILTER (WHERE b.is_flagged AND NOT a.is_flagged)::int AS "onlyB",
-              corr(a.score_rank, b.score_rank)::float8 AS "rankCorrelation"
-       ${joined}`,
-      [runA, runB],
-    ),
-    db.query(
-      `SELECT n::int AS top,
-              (SELECT count(*)::int ${joined} AND a.score_rank <= n AND b.score_rank <= n) AS shared
-       FROM unnest(ARRAY[10, 25, 50, 100]) AS n`,
-      [runA, runB],
-    ),
-    // Every contract flagged by either run, plus an even sample of the rest.
-    db.query(
-      `SELECT a.contract_id::int AS id, a.risk_score AS a, b.risk_score AS b,
-              a.is_flagged AS "flaggedA", b.is_flagged AS "flaggedB"
-       ${joined}
-       ORDER BY (a.is_flagged OR b.is_flagged) DESC, md5(a.contract_id::text)
-       LIMIT ${COMPARE_POINTS}`,
-      [runA, runB],
-    ),
-    db.query(
-      `SELECT c.id::int AS id, c.title, c.procuring_entity_raw AS "entityName",
-              a.score_rank AS "rankA", b.score_rank AS "rankB",
-              a.risk_score AS "scoreA", b.risk_score AS "scoreB",
-              a.is_flagged AS "flaggedA", b.is_flagged AS "flaggedB"
-       ${joined.replace('WHERE', 'JOIN contracts c ON c.id = a.contract_id WHERE')}
-         AND (a.is_flagged <> b.is_flagged)
-       ORDER BY abs(a.score_rank - b.score_rank) DESC
-       LIMIT 12`,
-      [runA, runB],
-    ),
-  ]);
-  return {
-    ...summary.rows[0],
-    topOverlap: overlap.rows,
-    points: points.rows,
-    disagreements: disagreements.rows,
-  };
 }

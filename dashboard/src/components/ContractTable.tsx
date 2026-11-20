@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { budgetShare, noticeSummary } from '../amounts';
+import { noticeSummary } from '../amounts';
 import type { ContractRow } from '../api';
-import { formatDate, formatPercent, formatPeso, toPoints } from '../format';
+import { formatDate, formatPeso, toPoints } from '../format';
 import { profileLink } from '../links';
 import type { Column, ViewSettings } from '../view';
 import { Icon } from './Icon';
@@ -37,8 +37,7 @@ export function ContractTable({
   view,
   loading,
 }: Props) {
-  const shows = (column: Column) =>
-    column === 'share' ? Boolean(view && !view.hidden.has('share')) : !view?.hidden.has(column);
+  const shows = (column: Column) => !view?.hidden.has(column);
   const grouped = view?.grouped ?? false;
   return (
     <div
@@ -70,11 +69,6 @@ export function ContractTable({
                 Contract amount
               </th>
             )}
-            {shows('share') && (
-              <th scope="col" className="col-share">
-                % of budget
-              </th>
-            )}
             <th scope="col" className="col-score">
               Score
             </th>
@@ -89,7 +83,6 @@ export function ContractTable({
           {rows.map((row, index) => {
             const isReviewed = reviewed?.has(row.id) ?? false;
             const notice = grouped ? noticeSummary(row) : null;
-            const share = budgetShare(row, grouped);
             const classes = [
               row.id === openId && 'is-open',
               row.id === cursorId && 'is-cursor',
@@ -144,12 +137,6 @@ export function ContractTable({
                   <td className="col-amount">
                     {formatPeso(row.amount)}
                     {notice && <span className="cell-sub">{notice.total}</span>}
-                  </td>
-                )}
-                {shows('share') && (
-                  <td className="col-share">
-                    {share ? formatPercent(share.share, 1) : 'Not published'}
-                    {share?.basis && <span className="cell-sub">{share.basis}</span>}
                   </td>
                 )}
                 <td className="col-score">

@@ -157,25 +157,3 @@ describe('GET /api/profile', () => {
     expect(params).toEqual([8, "O'Brien; DROP TABLE contracts"]);
   });
 });
-
-describe('GET /api/compare', () => {
-  it('needs two different runs that exist', async () => {
-    const { db } = fakeDb();
-    const app = createApp(db);
-
-    expect((await request(app).get('/api/compare').query({ a: 7, b: 7 })).status).toBe(400);
-    expect((await request(app).get('/api/compare').query({ a: 7 })).status).toBe(400);
-    expect((await request(app).get('/api/compare').query({ a: 7, b: 999 })).status).toBe(400);
-  });
-
-  it('compares the two runs asked for', async () => {
-    const { db, query } = fakeDb([{ contracts: 10 }]);
-
-    const response = await request(createApp(db)).get('/api/compare').query({ a: 7, b: 8 });
-
-    expect(response.status).toBe(200);
-    expect(response.body.a.id).toBe(7);
-    expect(response.body.b.id).toBe(8);
-    expect(callsMatching(query, 'rankCorrelation')[0]![1]).toEqual([7, 8]);
-  });
-});
