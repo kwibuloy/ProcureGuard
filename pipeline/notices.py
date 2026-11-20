@@ -162,16 +162,19 @@ def import_notices(connection, path: Path) -> tuple[int, int]:
     Returns (added, already stored).
     """
     rows = read_export(path)
-    added = 0
+    count = "SELECT count(*) FROM bid_notices"
     with connection.transaction():
-        for row in rows:
-            cursor = connection.execute(
+        before = connection.execute(count).fetchone()[0]
+        # Sent in batches: one round trip per row takes about an hour to a
+        # hosted database for a year of notices.
+        with connection.cursor() as cursor:
+            cursor.executemany(
                 f"INSERT INTO bid_notices ({', '.join(EXPORT_COLUMNS)})"
                 " VALUES (%s, %s, %s, %s, %s, %s, %s)"
                 " ON CONFLICT (source_series, bid_reference_no) DO NOTHING",
-                [row[column] for column in EXPORT_COLUMNS],
+                [[row[column] for column in EXPORT_COLUMNS] for row in rows],
             )
-            added += cursor.rowcount
+        added = connection.execute(count).fetchone()[0] - before
     return added, len(rows) - added
 
 
