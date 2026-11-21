@@ -51,7 +51,7 @@ All in `settings.py`. Each is a default I chose, pending the team's confirmation
 
 - **Grouped small-value awards** (`contract_splitting`): for a Small Value Procurement award, the number of such notices the same entity awarded to the same supplier within 30 days (this one included), when their approved budgets together exceed the ceiling above; 0 when there is no such group. Splitting a contract to evade public bidding is prohibited by Section 54.1 of the IRR. The data cannot show intent, so this is a pattern for review only. Counted by notice, so lots of one notice are one award. Missing for other procurement modes and when the award date is not published; the model sees 0 for those.
 
-A value that cannot be computed is stored as missing with the reason in `context.why_missing`. The model fills it with the column's median. That is a practical assumption, not a neutral one: on the 2024 data a missing value lowers a contract's score on average by 5.6 points (document requests), 3.7 (repeated winner) and 5.6 (price), so missing data never pushes a contract up but can hide one. `missing_fill` in `settings.py` switches to filling it as no red flag, and the sensitivity check measures the difference (row `missing_no_sign` below).
+A value that cannot be computed is stored as missing with the reason in `context.why_missing`. The model fills it with the column's median. That is a practical assumption, not a neutral one: on the 2024 data a missing value lowers a contract's score on average by 5.6 points (document requests), 3.7 (repeated winner) and 5.6 (price), for document requests the effect ranged from -8.4 to +1.3 points. Median imputation therefore generally lowers the scores of records with missing indicators, and can rank some unusual contracts lower. `missing_fill` in `settings.py` switches to filling it as no red flag, and the sensitivity check measures the difference (row `missing_no_sign` below).
 
 ## The model
 
@@ -119,21 +119,33 @@ The overall ranking hardly depends on the seed, and about nine in ten flags stay
 
 ## Controlled anomaly test
 
-`python -m ml.injection` adds synthetic contracts with known values to the real 2024 feature table, refits the Isolation Forest, and counts how many land in the flagged top 5%: 20 per scenario and level, for each indicator alone, every pair, and all four, with the planted indicators at the 90th, 99th or 99.9th percentile of their observed values and the rest at the median, plus 60 controls with every indicator at the median. It tests the model's behaviour on constructed cases, not whether real flags matter. Output in `data/processed/injection_test.*`.
+`python -m ml.injection` fits the Isolation Forest on the real 2024 contracts only, then scores synthetic test contracts with that fitted model, without retraining, so they cannot influence the model they test. Each synthetic contract keeps every indicator at its median except the ones tested, which take values defined in procurement terms for each indicator (percentiles would not work: 98% of contracts have no small-value group, so its 90th percentile is 0, and the 90th to 99.9th percentiles of document requests are all one request):
 
-Measured on the 2024 data (90,204 real contracts plus 720 planted), share of planted contracts flagged:
+| Indicator | Moderate | High | Extreme |
+|---|---|---|---|
+| Document requests | 2 | 1 | 1 (the lowest possible) |
+| Repeated-winner share | 50% | 80% | 100% |
+| Award-to-budget ratio above the comparable median | +2% | +5% | +10% |
+| Grouped small-value notices | 3 | 8 | 17 |
 
-| Planted as unusual | 90th | 99th | 99.9th |
+20 synthetic contracts per scenario (each indicator alone, every pair, all four) and level, plus 60 controls at the medians. A synthetic contract counts as flagged when it scores at or above the real data's flagging score. It tests the model's behaviour on constructed cases, not whether real flags matter. Output in `data/processed/injection_test.*`.
+
+Measured on the 2024 data, share flagged:
+
+| Planted as unusual | Moderate | High | Extreme |
 |---|---|---|---|
 | Few document requests alone | 0% | 0% | 0% |
-| Repeated winner alone | 0% | 40% | 30% |
-| High award-to-budget ratio alone | 0% | 90% | 100% |
-| Grouped small-value awards alone | 0% | 0% | 100% |
-| Any pair | 0% | 100% (few requests with splitting: 0%) | 100% |
-| All four | 20% | 100% | 100% |
+| Repeated winner alone | 0% | 0% | 0% |
+| High award-to-budget ratio alone | 100% | 100% | 100% |
+| Grouped small-value awards alone | 0% | 100% | 100% |
+| Few requests + repeated winner | 0% | 0% | 100% |
+| Repeated winner + grouped small-value | 30% | 100% | 100% |
+| Few requests + grouped small-value | 0% | 0% | 0% |
+| Every other pair | 100% | 100% | 100% |
+| All four | 100% | 100% | 100% |
 | Controls, all at the median | 0% | | |
 
-Typical contracts are never flagged, and contracts unusual on two indicators at once are. A single indicator is picked up only when its value is rare: one document request is shared by 31% of notices, so few requests alone never lifts a contract into the flagged set, and a high repeated-winner share is shared by every contract of the same entity and awardee, so it is caught at most 40% of the time. Some planted pairs cannot occur in the real data (document requests exist only for public bidding, splitting groups only for Small Value Procurement); they test the model, not the data.
+Typical contracts are never flagged. Two indicators are never enough on their own: one document request is shared by 31% of notices, and a 100% repeated-winner share by every contract of the same entity and awardee, so neither alone reaches the top 5% (100% repeated winner places a contract at the 93rd percentile). Price is the most sensitive dimension: an award 2% above its comparable median is already flagged, because awards cluster so tightly around their budget. Few requests with grouped small-value awards is never flagged, but that combination cannot occur in the real data (document requests exist only for public bidding, groups only for Small Value Procurement).
 
 ## Independent check
 
@@ -144,7 +156,7 @@ Measured on the 2024 data (86,784 notices, 3,937 flagged):
 | Check | Flagged | Unflagged, matched |
 |---|---|---|
 | Closed before the posting period ended (7 days, or 3 for Small Value Procurement) | 0 of 3,887 | 0.0% |
-| Public bidding open longer than the Section 25.5 maximum | 7 of 2,941 (0.2%) | 1.1% |
+| Public bidding open longer than the Section 25.5 maximum (counted from the last day of posting, the publication date plus 6 days) | 7 of 2,941 (0.2%) | 1.1% |
 
 No notice in the year closed early: every public bidding notice stayed open at least exactly 7 days and every Small Value request at least 3, so PhilGEPS appears to enforce the minimum and the check cannot tell notices apart. Flagged notices were not more likely to exceed the maximum period either. On the independent measures available, the flagged set shows no enrichment: the flags describe award patterns, not procedural deviations.
 

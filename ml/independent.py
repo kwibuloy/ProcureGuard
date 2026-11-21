@@ -12,9 +12,11 @@ posting rules of the 2016 Revised IRR of RA 9184:
                 for the required period: 7 calendar days for public bidding
                 (Section 21.2.1, Annex C), 3 calendar days for the request for
                 quotation in Small Value Procurement above PHP 50,000 (Annex H)
-  long window   public bidding whose period from the end of posting to the bid
-                deadline is longer than the maximum in Section 25.5: 50 days for
-                budgets up to PHP 50 million, 65 days above
+  long window   public bidding whose period from the last day of posting to the
+                bid deadline is longer than the maximum in Section 25.5: 50 days
+                for budgets up to PHP 50 million, 65 days above. Posting runs on
+                days 1 to 7 counting the publication date (Annex C), so the last
+                day of posting is the publication date plus 6 days
 
 Notices are compared, not contracts, so a notice awarded in lots counts once.
 Flagged notices are compared with unflagged notices in the same procurement mode,
@@ -89,7 +91,8 @@ def assess(notices: pd.DataFrame) -> pd.DataFrame:
 
     limit = np.where(frame["budget"].fillna(0) > LONG_WINDOW_LIMIT, *LONG_WINDOW_DAYS[::-1])
     public = (frame["group"] == PUBLIC_BIDDING) & days.notna() & (days >= 0)
-    frame["long_window"] = ((days - POSTING_DAYS[PUBLIC_BIDDING]) > limit).where(public)
+    last_posting_day = POSTING_DAYS[PUBLIC_BIDDING] - 1
+    frame["long_window"] = ((days - last_posting_day) > limit).where(public)
     return frame
 
 
@@ -166,11 +169,10 @@ def blind_sheet(frame: pd.DataFrame, seed: int = 2024) -> tuple[pd.DataFrame, pd
             "award_date",
         ]
     ].copy()
-    for column in (
-        "coa_observation_on_this_contract_or_entity",
-        "other_concern_in_public_records",
-        "notes",
-    ):
+    # One outcome per notice, from the four defined in Section 3.13:
+    # contract-specific observation, entity-level observation only,
+    # no matching observation found, insufficient information.
+    for column in ("outcome", "source_searched", "evidence_or_link", "notes"):
         sheet[column] = ""
     key = both[["review_id", "bid_reference_no", "in_group", "score_rank"]]
     return sheet, key

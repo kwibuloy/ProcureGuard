@@ -56,8 +56,8 @@ def test_long_window_uses_the_section_25_5_maximum_by_budget():
     frame = assess(
         notices(
             [
-                # 7 days of posting, then 51 days to the deadline: over the 50-day maximum.
-                {"published_date": "2024-01-01", "closing_date": "2024-02-28"},
+                # Last day of posting Jan 7; deadline 51 days later (Feb 27): over the maximum.
+                {"published_date": "2024-01-01", "closing_date": "2024-02-27"},
                 # Same window, budget above 50 million: the maximum is 65 days.
                 {
                     "budget": 60_000_000.0,
@@ -69,6 +69,9 @@ def test_long_window_uses_the_section_25_5_maximum_by_budget():
     )
 
     assert frame["long_window"].tolist() == [True, False]
+    # Exactly 50 days after the last day of posting is still within the maximum.
+    edge = assess(notices([{"published_date": "2024-01-01", "closing_date": "2024-02-26"}]))
+    assert edge["long_window"].tolist() == [False]
 
 
 def test_closing_before_publication_is_left_out_as_inconsistent():

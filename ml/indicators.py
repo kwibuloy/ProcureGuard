@@ -311,8 +311,9 @@ def model_features(
     unless the contract is part of a group. A
     missing value is replaced by the median of its column by default. This is a
     practical assumption, not a neutral one: on the 2024 data a missing value
-    lowers a contract's score by about 4 to 6 points on average, so missing data
-    never pushes a contract up but can hide one. missing_fill="no_sign" fills it
+    lowers a contract's score by about 4 to 6 points on average (for document
+    requests anywhere from -8.4 to +1.3 points), so it generally lowers scores and
+    can hide an unusual contract. missing_fill="no_sign" fills it
     with the value meaning no red flag instead. The stored indicator value stays
     missing.
     """

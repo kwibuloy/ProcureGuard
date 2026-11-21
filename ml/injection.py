@@ -2,17 +2,26 @@
 
 Run with: python -m ml.injection
 
-Synthetic contracts are added to the real 2024 feature table with known values:
-one indicator set to a chosen percentile of its observed values while the others
-stay at their medians, then pairs of indicators, then all four. A control group
-has every indicator at its median. The Isolation Forest is refitted on the real
-and synthetic contracts together, and the test reports how many synthetic
-contracts of each kind land in the flagged top 5%.
+The Isolation Forest is fitted on the real 2024 contracts only. Synthetic test
+contracts are then scored with that fitted model, without retraining, so they
+cannot influence the model they test. Each synthetic contract keeps every
+indicator at its median except the ones being tested, which are set to values
+defined in procurement terms for each indicator's own distribution:
 
-This checks the model's behaviour, not whether real flags matter: it shows which
-kinds of unusualness the model picks up, at what strength, and that typical
-contracts are not flagged. The synthetic rows are never stored. Writes
-data/processed/injection_test.json and .csv.
+  indicator                 moderate   high    extreme
+  document requests         2          1       1 (the lowest possible)
+  repeated-winner share     50%        80%     100%
+  award-to-budget ratio     +2%        +5%     +10% above the comparable median
+  grouped small-value       3          8       17 notices
+
+Percentiles would not work: 98% of contracts have no small-value group, so its
+90th percentile is 0, and the 90th to 99.9th percentiles of document requests are
+all one request. A control group has every indicator at its median.
+
+The test reports how many synthetic contracts of each kind score at or above the
+flagging score of the real data. It checks the model's behaviour on constructed
+cases, not whether real flags matter. Writes data/processed/injection_test.json
+and .csv.
 """
 
 import argparse
@@ -25,14 +34,29 @@ import pandas as pd
 
 from ml.data import load_contracts
 from ml.indicators import compute, model_features
-from ml.robustness import scoring
-from ml.settings import INDICATORS, Settings
+from ml.score import fit_scores, rank_and_flag
+from ml.settings import (
+    CONTRACT_SPLITTING,
+    INDICATORS,
+    PRICE_DEVIATION,
+    REPEATED_WINNER,
+    SINGLE_REQUESTER,
+    Settings,
+)
 from pipeline.config import PROCESSED_DIR
 from pipeline.db import connect
 
 MODEL = "isolation-forest"
-LEVELS = (0.90, 0.99, 0.999)  # percentile of the observed values for the planted indicator
-PER_SCENARIO = 20  # synthetic contracts per scenario and level
+LEVEL_NAMES = ("moderate", "high", "extreme")
+# Model feature values for each level. Document requests enter the model as
+# 1 / requests, so 2 requests is 0.5 and 1 request is 1.0.
+LEVELS = {
+    SINGLE_REQUESTER: (1 / 2, 1.0, 1.0),
+    REPEATED_WINNER: (0.5, 0.8, 1.0),
+    PRICE_DEVIATION: (0.02, 0.05, 0.10),
+    CONTRACT_SPLITTING: (3.0, 8.0, 17.0),
+}
+PER_SCENARIO = 20
 
 
 def scenarios() -> list[tuple[str, ...]]:
@@ -43,42 +67,44 @@ def scenarios() -> list[tuple[str, ...]]:
 
 
 def planted_rows(features: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
-    """Synthetic rows, labelled by scenario and level, plus a control group at the medians.
+    """Synthetic rows labelled by scenario and level, plus a control group at the medians.
 
-    Values get a small jitter (0.1% of the column's spread) so planted rows are not
-    exact copies of one another.
+    The indicators not being tested stay at their medians, with a tiny jitter
+    (0.1% of the column's spread) so the rows are not exact copies.
     """
-    medians = features.median()
-    spread = (features.max() - features.min()).replace(0, 1.0)
+    medians = features[list(INDICATORS)].median()
+    spread = (features[list(INDICATORS)].max() - features[list(INDICATORS)].min()).replace(0, 1.0)
+
+    def jittered() -> pd.Series:
+        return medians + rng.normal(0, 0.001, len(medians)) * spread
+
     rows = []
-    for level in LEVELS:
-        quantiles = features.quantile(level)
+    for index, level in enumerate(LEVEL_NAMES):
         for scenario in scenarios():
             for _ in range(PER_SCENARIO):
-                row = medians.copy()
+                row = jittered()
                 for name in scenario:
-                    row[name] = quantiles[name]
-                row += rng.normal(0, 0.001, len(row)) * spread
+                    row[name] = LEVELS[name][index]
                 rows.append({**row.to_dict(), "scenario": " + ".join(scenario), "level": level})
     for _ in range(PER_SCENARIO * 3):
-        row = medians + rng.normal(0, 0.001, len(medians)) * spread
-        rows.append({**row.to_dict(), "scenario": "control (all at median)", "level": None})
+        rows.append({**jittered().to_dict(), "scenario": "control (all at median)", "level": "-"})
     return pd.DataFrame(rows)
 
 
 def run_test(features: pd.DataFrame, settings: Settings, seed: int = 2024) -> pd.DataFrame:
-    rng = np.random.default_rng(seed)
-    planted = planted_rows(features, rng)
-    combined = pd.concat([features[list(INDICATORS)], planted[list(INDICATORS)]], ignore_index=True)
-    result = scoring(combined, MODEL, settings)
-    n_real = len(features)
+    """Fit on the real contracts, score the planted ones with the fitted model."""
+    model, _, real_scores = fit_scores(features, MODEL, settings)
+    _, _, threshold = rank_and_flag(real_scores, settings.flag_share)
+    planted = planted_rows(features, np.random.default_rng(seed))
+    scores = model.score(planted[list(INDICATORS)].to_numpy(dtype=float))
+    sorted_real = np.sort(real_scores)
     planted = planted.assign(
-        flagged=result.flagged[n_real:],
-        # Share of all contracts scored below it: 0.99 means it outranks 99% of contracts.
-        percentile=1 - (result.ranks[n_real:] - 1) / len(combined),
+        flagged=scores >= threshold,
+        # Share of real contracts scoring below it: 0.99 means it outranks 99% of them.
+        percentile=np.searchsorted(sorted_real, scores, side="left") / len(sorted_real),
     )
     summary = (
-        planted.groupby(["scenario", "level"], dropna=False)
+        planted.groupby(["scenario", "level"], sort=False)
         .agg(
             planted=("flagged", "size"),
             flagged=("flagged", "sum"),
@@ -104,7 +130,10 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "real_contracts": len(features),
                 "planted_per_scenario_and_level": PER_SCENARIO,
-                "levels": list(LEVELS),
+                "levels": {
+                    name: dict(zip(LEVEL_NAMES, LEVELS[name], strict=True)) for name in LEVELS
+                },
+                "fitted_on": "real contracts only; planted contracts scored without retraining",
                 "results": json.loads(summary.to_json(orient="records")),
             },
             indent=2,
@@ -112,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     pd.set_option("display.width", 200)
-    print(f"{len(features):,} real contracts plus {int(summary['planted'].sum()):,} planted")
+    print(f"Fitted on {len(features):,} real contracts; {int(summary['planted'].sum()):,} planted")
     print(summary.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print(
         "This tests the model's behaviour on constructed cases, not whether real flags are right."
