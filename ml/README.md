@@ -117,6 +117,24 @@ Seed stability, Isolation Forest, 10 seeds (26 s). Default seed 2024 against the
 
 The overall ranking hardly depends on the seed, and about nine in ten flags stay whichever seed is used; the top 100 is steadier than with three indicators (mean overlap 0.85, was 0.78). The difference between rank 40 and rank 140 still should not be read as meaningful.
 
+## Controlled anomaly test
+
+`python -m ml.injection` adds synthetic contracts with known values to the real 2024 feature table, refits the Isolation Forest, and counts how many land in the flagged top 5%: 20 per scenario and level, for each indicator alone, every pair, and all four, with the planted indicators at the 90th, 99th or 99.9th percentile of their observed values and the rest at the median, plus 60 controls with every indicator at the median. It tests the model's behaviour on constructed cases, not whether real flags matter. Output in `data/processed/injection_test.*`.
+
+Measured on the 2024 data (90,204 real contracts plus 720 planted), share of planted contracts flagged:
+
+| Planted as unusual | 90th | 99th | 99.9th |
+|---|---|---|---|
+| Few document requests alone | 0% | 0% | 0% |
+| Repeated winner alone | 0% | 40% | 30% |
+| High award-to-budget ratio alone | 0% | 90% | 100% |
+| Grouped small-value awards alone | 0% | 0% | 100% |
+| Any pair | 0% | 100% (few requests with splitting: 0%) | 100% |
+| All four | 20% | 100% | 100% |
+| Controls, all at the median | 0% | | |
+
+Typical contracts are never flagged, and contracts unusual on two indicators at once are. A single indicator is picked up only when its value is rare: one document request is shared by 31% of notices, so few requests alone never lifts a contract into the flagged set, and a high repeated-winner share is shared by every contract of the same entity and awardee, so it is caught at most 40% of the time. Some planted pairs cannot occur in the real data (document requests exist only for public bidding, splitting groups only for Small Value Procurement); they test the model, not the data.
+
 ## Independent check
 
 The PCC check (`/validate-flags`) looks at the same patterns the indicators measure, so it shows consistency, not independent support. `python -m ml.independent` compares flagged and unflagged notices, matched by procurement mode, region and budget band, on two procedural rules the model never sees (publication and closing dates against the posting periods of the 2016 Revised IRR). `--blind-sheet` also writes 20 top flagged and 20 matched unflagged notices, shuffled under neutral IDs, for a manual review that does not know which group each notice is in, with the key in a separate file. Output in `data/processed/`.
