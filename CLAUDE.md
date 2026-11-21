@@ -18,7 +18,7 @@ This file points to where things are. It is not documentation; keep it under 200
 | PCC red-flag patterns, GPPB procedural rules | 10-11 |
 | References and source URLs | 22-24 |
 
-Chapter 3 (methodology) is not written yet.
+Chapters 3 and 4 are drafted in the team's Word file; the PDF above is the approved Chapters 1-2.
 
 `docs/data-source.md` records what the PhilGEPS portal actually provides: file locations, which quarters are public, columns, data quirks, and the document request count. Read it before touching `pipeline/`.
 
@@ -67,14 +67,13 @@ tests/e2e/      one dataset through every layer
 .claude/        agents, skills, hooks
 ```
 
-All four layers are built and the database holds the real 2024 contracts (90,247), scored without document request counts because the scrape has not run. Each layer's `README.md` holds its setup and run commands; the skills read those. `tests/e2e/` runs one small dataset through every layer.
+All four layers are built. The database holds the real 2024 contracts (90,247) and document request counts for all 80,422 public bidding notices (`data/notices/bid_notices_2024.csv`), scored with four indicators. The deployed API runs in Vercel's `sin1` region, next to the Neon database. Each layer's `README.md` holds its setup and run commands; the skills read those. `tests/e2e/` runs one small dataset through every layer.
 
 ## Open decisions
 
 Not settled. Ask the user; do not pick one.
 
 - **Study defaults in `ml/settings.py`** (comparable contracts, budget bands, share flagged, smallest entity for repeated winner). Claude chose them as defaults and listed the reasons in `ml/README.md`; the team has not confirmed them.
-- **Whether to start the full document request scrape.**
 
 When one is decided, move it out of this list into the relevant README. Decided: Isolation Forest is the only model; the clustering model was removed in November 2026, and contract splitting was added as a fourth indicator (`ml/README.md`). Decisions already made for the pipeline (2024 only, scrape Public Bidding civil works only) are in `pipeline/README.md`.
 
