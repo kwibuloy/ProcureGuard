@@ -1,5 +1,5 @@
 import type { Indicator, IndicatorResult } from './api';
-import { formatCount, formatPercent, plural } from './format';
+import { formatCount, formatPercent, formatPeso, formatPesoCompact, plural } from './format';
 
 export interface IndicatorInfo {
   /** Short name used in chips, filters and chart labels. */
@@ -14,6 +14,7 @@ export const INDICATOR_ORDER: Indicator[] = [
   'single_requester',
   'repeated_winner',
   'price_deviation',
+  'contract_splitting',
 ];
 
 export const INDICATORS: Record<Indicator, IndicatorInfo> = {
@@ -32,11 +33,18 @@ export const INDICATORS: Record<Indicator, IndicatorInfo> = {
       'A high share can have ordinary causes, such as few qualified contractors in a remote area. It cannot show how the awardee came to win.',
   },
   price_deviation: {
-    label: 'Unusual price',
+    label: 'High award-to-budget ratio',
     measures:
-      'How far above the median of comparable contracts the awarded price sits, as a share of the budget. Awards cannot exceed the approved budget, so only a price above the median raises a score.',
+      'How far the award, as a share of its approved budget, sits above the median share of comparable contracts (same region and budget band). Awards cannot exceed the approved budget, so only a ratio above the median raises a score.',
     limit:
-      'Comparable contracts are grouped from published fields only. Differences in scope or site conditions that are not in the data can explain a deviation.',
+      'This measures how close an award is to its budget ceiling, not whether the project cost too much: the budget itself may be high or low. PhilGEPS publishes no project type, so a road and a school building with similar budgets in one region are compared, and differences in scope or site conditions can explain a deviation.',
+  },
+  contract_splitting: {
+    label: 'Grouped small-value awards',
+    measures:
+      'How many Small Value Procurement notices the entity awarded to the same supplier within 30 days, counted only when their budgets together exceed ₱1,000,000, the highest Small Value ceiling for infrastructure. Splitting a contract into smaller ones to avoid public bidding is prohibited (IRR of R.A. 9184, Section 54.1).',
+    limit:
+      'The data cannot show intent: separate small projects can fall in the same month for ordinary reasons. Most LGUs have a ceiling below ₱1,000,000, but the data has no LGU income class, so the highest ceiling is used for every entity.',
   },
 };
 
@@ -74,6 +82,12 @@ export function reason({ indicator, value, context }: IndicatorResult): string |
         return `Priced ${formatPercent(Math.abs(value), 1)} ${value >= 0 ? 'above' : 'below'} comparable contracts.`;
       }
       return `${awardedAt(context)} ${formatPercent(ratio, 1)} of the ${budgetCompared(context)}; comparable contracts were at ${formatPercent(median, 1)}.`;
+    }
+    case 'contract_splitting': {
+      if (value < 2) return null;
+      const total = number(context.window_budget_total);
+      const sum = total === undefined ? '' : ` (${formatPesoCompact(total)} together)`;
+      return `${formatCount(value)} small value awards to this supplier within 30 days${sum}.`;
     }
   }
 }
@@ -128,6 +142,16 @@ export function explain({ indicator, value, context }: IndicatorResult): string 
       const comparables =
         count === undefined ? 'comparable contracts' : plural(count, 'comparable contract');
       return `${awardedAt(context)} ${formatPercent(ratio, 1)} of the ${budgetCompared(context)}. The median for ${comparables}${basis} was ${formatPercent(median, 1)}.`;
+    }
+    case 'contract_splitting': {
+      const total = number(context.window_budget_total);
+      const days = number(context.window_days) ?? 30;
+      const ceiling = number(context.ceiling) ?? 1_000_000;
+      if (value < 2) {
+        return `No group: this entity’s small value awards to this supplier within ${days} days did not together exceed ${formatPeso(ceiling)}.`;
+      }
+      const sum = total === undefined ? '' : `, with budgets of ${formatPeso(total)} together`;
+      return `This entity made ${formatCount(value)} small value awards to this supplier within ${days} days${sum}, over the ${formatPeso(ceiling)} Small Value ceiling.`;
     }
   }
 }

@@ -6,7 +6,8 @@ from dataclasses import asdict, dataclass, replace
 SINGLE_REQUESTER = "single_requester"
 REPEATED_WINNER = "repeated_winner"
 PRICE_DEVIATION = "price_deviation"
-INDICATORS = (SINGLE_REQUESTER, REPEATED_WINNER, PRICE_DEVIATION)
+CONTRACT_SPLITTING = "contract_splitting"
+INDICATORS = (SINGLE_REQUESTER, REPEATED_WINNER, PRICE_DEVIATION, CONTRACT_SPLITTING)
 
 # Approved-budget bands (pesos) used to decide which contracts are comparable.
 BUDGET_BANDS = (1_000_000, 5_000_000, 20_000_000, 50_000_000)
@@ -25,11 +26,24 @@ class Settings:
     # price. Such amounts cluster at exactly 0.1% and 1%, the pattern of an amount
     # published in thousands or with a misplaced decimal point, not of a real bid.
     min_plausible_price_ratio: float = 0.2
+    # Contract splitting (IRR of R.A. 9184, Section 54.1): several Small Value
+    # Procurement awards from one entity to one supplier within this many days...
+    splitting_mode: str = "Small Value Procurement"
+    splitting_window_days: int = 30
+    # ...that together exceed the highest Small Value Procurement ceiling for
+    # infrastructure (Annex H, 2016 Revised IRR: PHP 1,000,000 for national
+    # agencies and the largest LGUs; LGU ceilings are lower, but the data has no
+    # LGU income class, so the highest ceiling is used for every entity).
+    splitting_ceiling: float = 1_000_000
+    # How a missing indicator value is filled for the model: "median" (the typical
+    # value of the column) or "no_sign" (the value meaning no red flag: many
+    # document requests, no concentration, no price above the median). Neither is
+    # neutral; the sensitivity check measures how much the choice matters.
+    missing_fill: str = "median"
     # Share of scored contracts shown as flagged for review.
     flag_share: float = 0.05
     random_seed: int = 2024
     isolation_forest_trees: int = 200
-    clusters: int = 8
     # Rows sampled to stand for "a typical contract" when computing SHAP values.
     shap_background_rows: int = 40
     # Approved-budget band edges (pesos) for comparable contracts.
@@ -79,6 +93,13 @@ SENSITIVITY_VARIANTS: tuple[tuple[str, dict], ...] = (
     # Smallest entity for the repeated-winner share.
     ("min_entity_3", {"min_entity_awards": 3}),
     ("min_entity_10", {"min_entity_awards": 10}),
+    # Contract splitting: the window, and the ceiling the grouped budgets must exceed.
+    ("splitting_window_15d", {"splitting_window_days": 15}),
+    ("splitting_window_60d", {"splitting_window_days": 60}),
+    ("splitting_ceiling_500k", {"splitting_ceiling": 500_000}),
+    ("splitting_ceiling_2m", {"splitting_ceiling": 2_000_000}),
+    # Missing indicator values filled with "no red flag" instead of the median.
+    ("missing_no_sign", {"missing_fill": "no_sign"}),
 )
 
 # Seeds for the Isolation Forest seed-stability check; the default seed is compared with each.

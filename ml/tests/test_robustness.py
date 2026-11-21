@@ -11,7 +11,7 @@ from ml.sensitivity import sensitivity
 from ml.settings import Settings
 from ml.stability import stability
 
-FAST = Settings(isolation_forest_trees=30, clusters=3, min_comparable_contracts=5)
+FAST = Settings(isolation_forest_trees=30, min_comparable_contracts=5)
 
 
 def contracts(rows: int = 200) -> pd.DataFrame:

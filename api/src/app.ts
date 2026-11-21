@@ -2,7 +2,6 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { toCsvWithin } from './csv.js';
 import { cacheForRun, CACHE_LATEST, rateLimit, securityHeaders, type RateLimit } from './http.js';
 import {
-  compareRuns,
   contractDetail,
   dataQuality,
   dataVersion,
@@ -13,12 +12,15 @@ import {
   listContracts,
   listRuns,
   overview,
+  feedItems,
+  pricePeers,
   profile,
   SORTS,
   type Db,
   type Indicator,
   type Sort,
 } from './queries.js';
+import { reviewRoutes } from './reviews/routes.js';
 
 const MAX_PAGE_SIZE = 100;
 
@@ -68,6 +70,12 @@ const positiveInt = (value: unknown, fallback: number) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+/** A calendar date as YYYY-MM-DD, or undefined. */
+const day = (value: unknown) => {
+  const found = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+  return found && !Number.isNaN(Date.parse(`${found}T00:00:00Z`)) ? found : undefined;
+};
+
 /** A score between 0 and 1, or undefined when the value is absent or not one. */
 const score = (value: unknown) => {
   const parsed = typeof value === 'string' && value !== '' ? Number(value) : NaN;
@@ -88,12 +96,83 @@ function contractFilters(query: Request['query']) {
     reason: INDICATORS.includes(reason as Indicator) ? (reason as Indicator) : undefined,
     scoreFrom: score(query.scoreFrom),
     scoreTo: score(query.scoreTo),
+    awardFrom: day(query.awardFrom),
+    awardTo: day(query.awardTo),
     flaggedOnly: query.flagged === 'true',
+    newOnly: query.new === 'true',
     sort: (sort && sort in SORTS ? sort : 'rank') as Sort,
   };
 }
 
-/** The API only reads. Scores are computed by ml/ and stored in PostgreSQL. */
+/** Where links in the feed point. Set SITE_URL for another deployment. */
+const siteUrl = () =>
+  (process.env.SITE_URL ?? 'https://procureguard-bcd.vercel.app').replace(/\/$/, '');
+
+/** The first line of every exported file, so the file never travels without it. */
+export function exportNote(
+  run: { id: number; modelName: string; createdAt?: string | Date } | null,
+) {
+  // pg returns timestamps as Date objects; tests and JSON pass strings.
+  const created = run?.createdAt ? new Date(run.createdAt) : null;
+  const scored =
+    created && !Number.isNaN(created.getTime())
+      ? `, scored ${created.toISOString().slice(0, 10)}`
+      : '';
+  return (
+    `ProcureGuard export${run ? ` from scoring run ${run.id} (${run.modelName}${scored})` : ''}. ` +
+    'A flag means a contract is statistically unusual and warrants human review. ' +
+    'It is not evidence of corruption, fraud or bid rigging. Source: PhilGEPS open data.'
+  );
+}
+
+const xml = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+export function rssFeed(
+  site: string,
+  run: { id: number; createdAt?: string } | null,
+  items: Record<string, unknown>[],
+  region?: string,
+) {
+  const title = `ProcureGuard: newly flagged contracts${region ? ` in ${region}` : ''}`;
+  const entries = items
+    .map((item) => {
+      const link = `${site}/contracts/${item.id}`;
+      const description = [
+        `${item.entityName} awarded this to ${item.awardeeName}.`,
+        `Score ${Math.round(Number(item.score) * 100)} of 100, rank ${item.rank}.`,
+        'Flagged for review: statistically unusual, not evidence of wrongdoing.',
+      ].join(' ');
+      return `    <item>
+      <title>${xml(item.title)}</title>
+      <link>${xml(link)}</link>
+      <guid isPermaLink="false">procureguard-run-${run?.id}-contract-${item.id}</guid>
+      <description>${xml(description)}</description>
+      ${item.region ? `<category>${xml(item.region)}</category>` : ''}
+    </item>`;
+    })
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>${xml(title)}</title>
+    <link>${xml(site)}</link>
+    <description>Contracts flagged in the latest scoring run that the previous run did not flag. A flag means statistically unusual and warrants human review; it is not evidence of wrongdoing.</description>
+    <language>en-ph</language>
+${entries}
+  </channel>
+</rss>
+`;
+}
+
+/**
+ * Scores are computed by ml/ and stored in PostgreSQL; the API only reads them.
+ * Its one write path is human review (reviews/routes.ts), behind reviewer sign-in.
+ */
 export function createApp(db: Db, options: AppOptions = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -173,7 +252,9 @@ export function createApp(db: Db, options: AppOptions = {}) {
     const rows = run
       ? await exportContracts(db, run.id, contractFilters(req.query), exportRowLimit + 1)
       : [];
-    const { csv, written } = toCsvWithin(rows.slice(0, exportRowLimit), exportMaxBytes);
+    const { csv, written } = toCsvWithin(rows.slice(0, exportRowLimit), exportMaxBytes, [
+      exportNote(run),
+    ]);
     const truncated = written < rows.length;
     res
       .set({
@@ -197,6 +278,23 @@ export function createApp(db: Db, options: AppOptions = {}) {
     res.json(contract);
   });
 
+  app.get('/api/contracts/:id/price-peers', async (req, res) => {
+    const id = positiveInt(req.params.id, 0);
+    const { run, notModified } = await servedRun(req, res);
+    if (notModified) return;
+    const peers = id && run ? await pricePeers(db, run.id, id) : null;
+    if (!peers) return res.status(404).json({ error: 'No price comparison for this contract' });
+    res.json(peers);
+  });
+
+  // Newly flagged contracts as an RSS feed, for anyone who wants to follow them.
+  app.get('/api/feed.xml', async (req, res) => {
+    const run = await findRun(db);
+    res.set('Cache-Control', CACHE_LATEST);
+    const items = run ? await feedItems(db, run.id, { region: text(req.query.region) }) : [];
+    res.type('application/rss+xml').send(rssFeed(siteUrl(), run, items, text(req.query.region)));
+  });
+
   app.get('/api/profile', async (req, res) => {
     const kind = req.query.kind === 'awardee' ? 'awardee' : 'entity';
     const name = text(req.query.name);
@@ -205,22 +303,6 @@ export function createApp(db: Db, options: AppOptions = {}) {
     const found = name && run ? await profile(db, run.id, kind, name) : null;
     if (!found) return res.status(404).json({ error: 'Not found in this scoring run' });
     res.json(found);
-  });
-
-  app.get('/api/compare', async (req, res) => {
-    const a = positiveInt(req.query.a, 0);
-    const b = positiveInt(req.query.b, 0);
-    const [runA, runB, version] = await Promise.all([
-      findRun(db, a),
-      findRun(db, b),
-      dataVersion(db),
-    ]);
-    if (!a || !b || a === b || runA?.id !== a || runB?.id !== b) {
-      return res.status(400).json({ error: 'Choose two different scoring runs' });
-    }
-    // Both runs are named in the URL, so the comparison never changes.
-    if (cacheForRun(req, res, { pinned: true, version: `${a}-${b}:${version}` })) return;
-    res.json({ a: runA, b: runB, ...(await compareRuns(db, a, b)) });
   });
 
   app.get('/api/places', async (req, res) => {
@@ -234,11 +316,18 @@ export function createApp(db: Db, options: AppOptions = {}) {
     res.json(await dataQuality(db));
   });
 
+  reviewRoutes(app, db, { secureCookie: trustProxy, trustProxy });
+
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    console.error(error);
     // Never cache an error, or a passing failure would be served for a day.
     res.set('Cache-Control', 'no-store');
     res.removeHeader('ETag');
+    // A malformed or oversized request body (express.json) is the client's mistake.
+    const status = (error as { status?: number })?.status;
+    if (status === 400 || status === 413) {
+      return res.status(status).json({ error: 'The request body could not be read' });
+    }
+    console.error(error);
     res.status(500).json({ error: 'The server could not complete the request' });
   });
 

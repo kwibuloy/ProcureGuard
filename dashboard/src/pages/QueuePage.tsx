@@ -15,7 +15,7 @@ import { Notice } from '../components/States';
 import { ViewMenu } from '../components/ViewMenu';
 import { formatCount } from '../format';
 import { useOverview } from '../overview';
-import { useReviewed } from '../reviewed';
+import { useReviewStatuses } from '../reviews';
 import { PHONE, useMedia } from '../useMedia';
 import {
   hasViewParams,
@@ -65,7 +65,7 @@ export function QueuePage() {
   const list = useApi<ContractList>(listPath);
   const openId = Number(useMatch('/contracts/:id')?.params.id) || null;
   const search = params.toString();
-  const { reviewed } = useReviewed();
+  const statuses = useReviewStatuses(list.data?.items.map((row) => row.id) ?? []);
   const searchBox = useRef<HTMLInputElement>(null);
   const [cursor, setCursor] = useState<number | null>(null);
 
@@ -278,7 +278,7 @@ export function QueuePage() {
             contractLink: (id) => ({ pathname: `/contracts/${id}`, search }),
             openId,
             cursorId: cursor,
-            reviewed,
+            statuses,
             view,
           }}
           phone={phone}

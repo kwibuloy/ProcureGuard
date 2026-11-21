@@ -62,6 +62,9 @@ export function contractFilter(runId: number, filters: ContractFilters, terms: S
   // The top band includes a score of exactly 1.
   if (filters.scoreTo !== undefined && filters.scoreTo < 1)
     add('s.risk_score < ?', filters.scoreTo);
+  if (filters.awardFrom) add('c.award_date >= ?::date', filters.awardFrom);
+  if (filters.awardTo) add('c.award_date <= ?::date', filters.awardTo);
   if (filters.flaggedOnly) where.push('s.is_flagged');
+  if (filters.newOnly) where.push('s.is_flagged AND NOT COALESCE(prev.is_flagged, FALSE)');
   return { where: where.join(' AND '), params };
 }

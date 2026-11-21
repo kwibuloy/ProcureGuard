@@ -44,5 +44,14 @@ export async function profile(db: Db, runId: number, kind: ProfileKind, name: st
      LIMIT 12`,
     [runId, name],
   );
-  return { kind, key: name, ...summary.rows[0], top: counterparties.rows };
+  const months = await db.query(
+    `SELECT to_char(date_trunc('month', c.award_date), 'YYYY-MM') AS month,
+            count(*)::int AS contracts, count(*) FILTER (WHERE s.is_flagged)::int AS flagged,
+            coalesce(sum(c.contract_amount), 0)::float8 AS value
+     FROM contracts c JOIN contract_scores s ON s.contract_id = c.id AND s.run_id = $1
+     WHERE c.${own} = $2 AND c.award_date IS NOT NULL
+     GROUP BY 1 ORDER BY 1`,
+    [runId, name],
+  );
+  return { kind, key: name, ...summary.rows[0], top: counterparties.rows, months: months.rows };
 }

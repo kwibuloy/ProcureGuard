@@ -6,12 +6,19 @@ from ml.indicators import (
     WHY_MISSING,
     budget_band,
     compute,
+    contract_splitting,
     model_features,
     price_deviation,
     repeated_winner,
     single_requester,
 )
-from ml.settings import PRICE_DEVIATION, REPEATED_WINNER, SINGLE_REQUESTER, Settings
+from ml.settings import (
+    CONTRACT_SPLITTING,
+    PRICE_DEVIATION,
+    REPEATED_WINNER,
+    SINGLE_REQUESTER,
+    Settings,
+)
 
 SETTINGS = Settings(min_entity_awards=3, min_comparable_contracts=3)
 
@@ -125,6 +132,8 @@ def test_price_deviation_is_measured_from_the_comparable_median():
         "comparable_median_ratio": pytest.approx(0.95),
         "comparable_count": 3,
         "comparable_basis": "same region and budget band",
+        "comparable_band": 1,
+        "comparable_region": "Region I",
         "budget_compared": "approved budget",
         "notice_award_count": 1,
     }
@@ -193,7 +202,12 @@ def test_model_features_invert_requests_and_fill_missing_with_the_typical_value(
     assert not features.isna().any().any()
     # The stored indicator value stays missing.
     assert np.isnan(indicators[SINGLE_REQUESTER]["value"][3])
-    assert set(features.columns) == {SINGLE_REQUESTER, REPEATED_WINNER, PRICE_DEVIATION}
+    assert set(features.columns) == {
+        SINGLE_REQUESTER,
+        REPEATED_WINNER,
+        PRICE_DEVIATION,
+        CONTRACT_SPLITTING,
+    }
 
 
 def test_price_is_missing_when_a_line_item_has_more_than_one_award_notice():
@@ -258,3 +272,104 @@ def test_model_sees_price_only_above_the_comparable_median():
     assert features[PRICE_DEVIATION][0] == 0.0
     assert features[PRICE_DEVIATION][3] > 0.0
     assert compute(frame, SETTINGS)[PRICE_DEVIATION]["value"][0] < 0
+
+
+SVP = "Negotiated Procurement - Small Value Procurement (Sec. 53.9)"
+
+
+def svp(day: str, budget: float, **row) -> dict:
+    return {
+        "procurement_mode": SVP,
+        "award_date": day,
+        "approved_budget": budget,
+        "contract_amount": budget,
+        "bid_reference_no": row.pop("ref", None),
+        **row,
+    }
+
+
+def test_small_value_awards_that_together_exceed_the_ceiling_are_a_group():
+    frame = contracts(
+        [
+            svp("2024-03-01", 600_000, ref="1"),
+            svp("2024-03-20", 600_000, ref="2"),
+            svp("2024-03-25", 300_000, ref="3"),
+        ]
+    )
+
+    result = contract_splitting(frame, SETTINGS)
+
+    # 1.5M within 30 days of each other, over the 1M ceiling: three notices.
+    assert result["value"].tolist() == [3.0, 3.0, 3.0]
+    assert result["context"][0]["window_budget_total"] == 1_500_000
+
+
+def test_small_value_awards_under_the_ceiling_or_far_apart_are_not_a_group():
+    frame = contracts(
+        [
+            svp("2024-03-01", 400_000, ref="1"),
+            svp("2024-03-10", 400_000, ref="2"),  # together 800k: under the ceiling
+            svp("2024-06-01", 900_000, ref="3"),
+            svp("2024-09-01", 900_000, ref="4"),  # over 1M together, but months apart
+        ]
+    )
+
+    assert contract_splitting(frame, SETTINGS)["value"].tolist() == [0.0, 0.0, 0.0, 0.0]
+
+
+def test_splitting_needs_the_same_supplier():
+    frame = contracts(
+        [
+            svp("2024-03-01", 700_000, ref="1", awardee="BUILDER 1"),
+            svp("2024-03-05", 700_000, ref="2", awardee="BUILDER 2"),
+        ]
+    )
+
+    assert contract_splitting(frame, SETTINGS)["value"].tolist() == [0.0, 0.0]
+
+
+def test_lots_of_one_notice_count_once():
+    frame = contracts(
+        [
+            svp("2024-03-01", 1_500_000, ref="1"),
+            svp("2024-03-01", 1_500_000, ref="1"),  # second lot of the same notice
+        ]
+    )
+
+    assert contract_splitting(frame, SETTINGS)["value"].tolist() == [0.0, 0.0]
+
+
+def test_splitting_is_missing_outside_small_value_procurement():
+    frame = contracts([{}, svp(None, 500_000, ref="9")])
+
+    result = contract_splitting(frame, SETTINGS)
+
+    assert np.isnan(result["value"][0])
+    assert "small value procurement" in result["context"][0][WHY_MISSING]
+    assert "award date" in result["context"][1][WHY_MISSING]
+    # The model sees no sign of splitting for either.
+    assert model_features(compute(frame, SETTINGS))[CONTRACT_SPLITTING].tolist() == [0.0, 0.0]
+
+
+def test_price_context_names_the_comparable_group():
+    frame = contracts([{"contract_amount": 1_900_000.0}] * 3)
+
+    context = price_deviation(frame, SETTINGS)["context"][0]
+
+    assert context["comparable_basis"] == "same region and budget band"
+    assert context["comparable_band"] == 1  # 1M to 5M
+    assert context["comparable_region"] == "Region I"
+
+
+def test_missing_values_can_be_filled_as_no_red_flag():
+    frame = contracts(
+        [{"document_requests": 1.0}, {"document_requests": 5.0}, {"document_requests": None}]
+    )
+    indicators = compute(frame, SETTINGS)
+
+    assert model_features(indicators)[SINGLE_REQUESTER][2] == pytest.approx(
+        0.6
+    )  # median of 1.0, 0.2
+    assert model_features(indicators, "no_sign")[SINGLE_REQUESTER][2] == 0.0
+    with pytest.raises(ValueError):
+        model_features(indicators, "guess")

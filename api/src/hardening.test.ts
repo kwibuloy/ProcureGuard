@@ -206,12 +206,16 @@ describe('CSV export size', () => {
     const response = await request(createApp(db, { exportRowLimit: 3 })).get('/api/contracts.csv');
 
     const lines = response.text.trim().split('\r\n');
-    expect(lines).toHaveLength(1 + 3);
+    // The disclaimer, the header and three rows.
+    expect(lines).toHaveLength(1 + 1 + 3);
+    expect(lines[0]).toContain('It is not evidence of corruption, fraud or bid rigging.');
     expect(response.headers['x-export-rows']).toBe('3');
     expect(response.headers['x-export-truncated']).toBe('true');
     expect(response.headers['content-disposition']).toContain('first-3');
     // It asks for one row more than the limit, to know whether there were more.
-    const exportCall = query.mock.calls.find(([sql]) => sql.includes('points_unusual_price'))!;
+    const exportCall = query.mock.calls.find(([sql]) =>
+      sql.includes('points_high_award_to_budget_ratio'),
+    )!;
     expect(exportCall[0]).toContain('LIMIT 4');
   });
 
@@ -267,5 +271,24 @@ describe('database pool', () => {
     expect(config.port).toBe(5433);
     expect(config.host).toBe('127.0.0.1');
     expect(config.database).toBe('procureguard');
+  });
+});
+
+describe('export note', () => {
+  it('dates the run whether the database gives a Date or a string', async () => {
+    const { exportNote } = await import('./app.js');
+    const fromDb = exportNote({
+      id: 27,
+      modelName: 'Isolation Forest',
+      createdAt: new Date('2026-11-20T15:00:00Z'),
+    });
+    const fromJson = exportNote({
+      id: 27,
+      modelName: 'Isolation Forest',
+      createdAt: '2026-11-20T15:00:00Z',
+    });
+
+    expect(fromDb).toContain('scored 2026-11-20');
+    expect(fromJson).toBe(fromDb);
   });
 });

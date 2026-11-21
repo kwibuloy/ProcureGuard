@@ -18,6 +18,8 @@ import { AboutPage } from './pages/AboutPage';
 import { ContractPanel } from './pages/ContractPanel';
 import { ProfilePage } from './pages/ProfilePage';
 import { QueuePage } from './pages/QueuePage';
+import { SignInPage } from './pages/SignInPage';
+import { ReviewerProvider, useReviewer } from './reviews';
 import { RunProvider, useRuns } from './run';
 
 type Theme = 'light' | 'dark';
@@ -84,7 +86,7 @@ function ThemeToggle() {
   );
 }
 
-/** Chooses which model's scoring run every page shows. */
+/** Chooses which scoring run every page shows; earlier runs are kept for the record. */
 function RunPicker({ shownId }: { shownId: number | null }) {
   const { runs, select } = useRuns();
   if (runs.length < 2 || shownId === null) return null;
@@ -129,6 +131,20 @@ function NavLinks({ pathname }: { pathname: string }) {
   });
 }
 
+/** Shown only while a reviewer is signed in. */
+function ReviewerChip() {
+  const { reviewer, signOut } = useReviewer();
+  if (!reviewer) return null;
+  return (
+    <span className="reviewer-chip">
+      <span title="Signed in as a reviewer">{reviewer.displayName}</span>
+      <button type="button" className="button button-quiet" onClick={() => signOut()}>
+        Sign out
+      </button>
+    </span>
+  );
+}
+
 function Layout() {
   const { selected } = useRuns();
   const overview = useApi<Overview>(withRun('/api/overview', selected));
@@ -166,6 +182,7 @@ function Layout() {
             </NavLink>
           </aside>
           <div className="topbar-end">
+            <ReviewerChip />
             <RunPicker shownId={run?.id ?? null} />
             <ThemeToggle />
           </div>
@@ -200,6 +217,14 @@ function Layout() {
           A flag marks a contract as statistically unusual. It is not a finding of wrongdoing by any
           person or organization.
         </p>
+        <p className="footer-links">
+          <a href="/api/feed.xml" className="text-link">
+            Newly flagged contracts (RSS)
+          </a>
+          <NavLink to="/signin" className="text-link">
+            Team sign-in
+          </NavLink>
+        </p>
       </footer>
     </>
   );
@@ -209,26 +234,29 @@ export default function App() {
   return (
     <BrowserRouter>
       <RunProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<QueuePage />}>
-              <Route path="contracts/:id" element={<ContractPanel />} />
+        <ReviewerProvider>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<QueuePage />}>
+                <Route path="contracts/:id" element={<ContractPanel />} />
+              </Route>
+              <Route path="/profile/:kind" element={<ProfilePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/signin" element={<SignInPage />} />
+              {/* The data quality and method pages became sections of the About page. */}
+              <Route
+                path="/data"
+                element={<Navigate to={{ pathname: '/about', hash: '#data' }} replace />}
+              />
+              <Route
+                path="/method"
+                element={<Navigate to={{ pathname: '/about', hash: '#method' }} replace />}
+              />
+              {/* Old links (the removed compare page) and typos land on the contract list. */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
-            <Route path="/profile/:kind" element={<ProfilePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            {/* The data quality and method pages became sections of the About page. */}
-            <Route
-              path="/data"
-              element={<Navigate to={{ pathname: '/about', hash: '#data' }} replace />}
-            />
-            <Route
-              path="/method"
-              element={<Navigate to={{ pathname: '/about', hash: '#method' }} replace />}
-            />
-            {/* Old links (the removed compare page) and typos land on the contract list. */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
+          </Routes>
+        </ReviewerProvider>
       </RunProvider>
     </BrowserRouter>
   );

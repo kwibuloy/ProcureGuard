@@ -67,8 +67,8 @@ export async function overview(db: Db, runId: number) {
 
 // Fields a reviewer or an indicator depends on, in the order the page shows them.
 const QUALITY_FIELDS = [
-  ['contract_amount', 'Contract amount', 'Unusual price'],
-  ['approved_budget', 'Approved budget', 'Unusual price'],
+  ['contract_amount', 'Contract amount', 'High award-to-budget ratio'],
+  ['approved_budget', 'Approved budget', 'High award-to-budget ratio'],
   ['region', 'Region', 'Comparable contracts'],
   ['bid_reference_no', 'Bid notice reference', 'Few document requests'],
   ['procurement_mode', 'Procurement mode', 'Few document requests'],

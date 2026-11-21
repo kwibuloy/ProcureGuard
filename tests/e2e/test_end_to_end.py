@@ -121,7 +121,7 @@ def database():
 
 @pytest.fixture(scope="module")
 def scored(database, tmp_path_factory):
-    """Clean and load the fixture file, add document request counts, score with both models."""
+    """Clean and load the fixture file, add document request counts, score the contracts."""
     path = tmp_path_factory.mktemp("raw") / "legacy_2024_Q1.csv"
     path.write_text("\n".join([HEADER, *_rows()]) + "\n", encoding="utf-8-sig")
 
@@ -135,7 +135,7 @@ def scored(database, tmp_path_factory):
             [contract.bid_reference_no, requests],
         )
 
-    settings = Settings(isolation_forest_trees=50, clusters=3, min_comparable_contracts=10)
+    settings = Settings(isolation_forest_trees=50, min_comparable_contracts=10)
     frame = load_contracts(database)
     indicators = compute(frame, settings)
     features = model_features(indicators)
@@ -144,6 +144,7 @@ def scored(database, tmp_path_factory):
         result = score_contracts(features, key, settings)
         runs[key] = store(database, frame, indicators, result, settings)
     database.commit()
+    assert list(runs) == ["isolation-forest"]
     return {"stats": stats, "runs": runs, "contracts": len(contracts)}
 
 
@@ -212,7 +213,7 @@ def test_api_serves_what_the_engine_stored(database, scored, api):
         assert sum(band["count"] for band in overview["histogram"]) == 66
 
 
-def test_the_planted_contract_ranks_first_in_both_models(scored, api):
+def test_the_planted_contract_ranks_first(scored, api):
     for run_id in scored["runs"].values():
         top = _get(f"/contracts?run={run_id}&flagged=true&pageSize=1")["items"][0]
 
@@ -234,20 +235,15 @@ def test_the_explanation_adds_up_and_states_the_figures(scored, api):
     assert by_name["single_requester"]["context"]["document_requests"] == 1
     assert by_name["repeated_winner"]["context"] == {"wins": 6, "entity_awards": 6}
     assert by_name["price_deviation"]["context"]["amount_to_budget_ratio"] == pytest.approx(0.5)
-    # The other model's verdict on the same contract comes along.
-    assert [other["runId"] for other in detail["otherRuns"]] == [scored["runs"]["clustering"]]
+    assert "otherRuns" not in detail
 
 
-def test_profile_comparison_and_quality_endpoints_agree_with_the_data(scored, api):
-    forest, clustering = scored["runs"]["isolation-forest"], scored["runs"]["clustering"]
+def test_profile_and_quality_endpoints_agree_with_the_data(scored, api):
+    forest = scored["runs"]["isolation-forest"]
 
     profile = _get(f"/profile?kind=entity&name=ENTITY%209&run={forest}")
     assert profile["contracts"] == 6
     assert profile["top"][0]["contracts"] == 6
-
-    comparison = _get(f"/compare?a={forest}&b={clustering}")
-    assert comparison["contracts"] == 66
-    assert comparison["flaggedByBoth"] >= 1
 
     quality = _get("/data-quality")
     assert quality["contracts"] == 66

@@ -3,6 +3,9 @@
 Run with: python -m pipeline.notices            (next 100 notices not yet fetched)
           python -m pipeline.notices --all      (every remaining notice)
           python -m pipeline.notices --refs 11214813 11329838
+          python -m pipeline.notices --all --part 1 --of 2   (one person's half)
+          python -m pipeline.notices --export data/notices/part1.csv
+          python -m pipeline.notices --import data/notices/part2.csv
 
 PhilGEPS publishes no bidder count. Each legacy bid notice page shows how many
 suppliers requested the bidding documents, which this project uses as a proxy
@@ -12,9 +15,11 @@ A run can be stopped and restarted at any point.
 """
 
 import argparse
+import csv
 import re
 import sys
 import time
+import zlib
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,6 +97,85 @@ def targets(paths: Iterable[Path]) -> Iterator[str]:
                 continue
             seen.add(reference)
             yield reference
+
+
+def in_part(reference: str, part: int, of: int) -> bool:
+    """Whether a notice belongs to one share of a scrape split between people.
+
+    The share depends on the reference alone, not on file order, so every
+    computer with the same downloads splits the notices the same way.
+    """
+    return zlib.crc32(reference.encode()) % of == part - 1
+
+
+EXPORT_COLUMNS = (
+    "source_series",
+    "bid_reference_no",
+    "fetch_status",
+    "document_request_count",
+    "bid_supplement_count",
+    "notice_status",
+    "fetched_at",
+)
+
+
+def export_notices(connection, path: Path) -> int:
+    """Write every stored notice to a CSV file so another computer can import it."""
+    rows = connection.execute(
+        f"SELECT {', '.join(EXPORT_COLUMNS)} FROM bid_notices"
+        " ORDER BY source_series, bid_reference_no"
+    ).fetchall()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(EXPORT_COLUMNS)
+        for row in rows:
+            writer.writerow(
+                [value.isoformat() if hasattr(value, "isoformat") else value for value in row]
+            )
+    return len(rows)
+
+
+def read_export(path: Path) -> list[dict]:
+    with path.open(newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        if tuple(reader.fieldnames or ()) != EXPORT_COLUMNS:
+            raise ValueError(f"{path} is not a notices export: unexpected columns")
+        rows = []
+        for row in reader:
+            if row["fetch_status"] not in ("ok", "not_found", "unreadable"):
+                raise ValueError(f"{path}: unknown fetch_status {row['fetch_status']!r}")
+            rows.append(
+                {
+                    **row,
+                    "document_request_count": _count(row["document_request_count"]),
+                    "bid_supplement_count": _count(row["bid_supplement_count"]),
+                    "notice_status": row["notice_status"] or None,
+                }
+            )
+        return rows
+
+
+def import_notices(connection, path: Path) -> tuple[int, int]:
+    """Add notices from an export. A notice already stored here is kept as it is.
+
+    Returns (added, already stored).
+    """
+    rows = read_export(path)
+    count = "SELECT count(*) FROM bid_notices"
+    with connection.transaction():
+        before = connection.execute(count).fetchone()[0]
+        # Sent in batches: one round trip per row takes about an hour to a
+        # hosted database for a year of notices.
+        with connection.cursor() as cursor:
+            cursor.executemany(
+                f"INSERT INTO bid_notices ({', '.join(EXPORT_COLUMNS)})"
+                " VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                " ON CONFLICT (source_series, bid_reference_no) DO NOTHING",
+                [[row[column] for column in EXPORT_COLUMNS] for row in rows],
+            )
+        added = connection.execute(count).fetchone()[0] - before
+    return added, len(rows) - added
 
 
 def fetch(reference: str, session) -> str:
@@ -178,7 +262,28 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
     parser.add_argument("--all", action="store_true", help="fetch every remaining notice")
     parser.add_argument("--delay", type=float, default=DEFAULT_DELAY_SECONDS)
+    parser.add_argument("--part", type=int, help="fetch only this share of the notices (1, 2, ...)")
+    parser.add_argument("--of", type=int, help="how many shares the scrape is split into")
+    parser.add_argument("--export", type=Path, help="write stored notices to this CSV file")
+    parser.add_argument(
+        "--import", dest="import_paths", type=Path, nargs="+", help="add notices from exports"
+    )
     args = parser.parse_args(argv)
+
+    if args.export or args.import_paths:
+        with connect(autocommit=True) as connection:
+            for path in args.import_paths or ():
+                added, kept = import_notices(connection, path)
+                print(f"{path}: added {added:,}, already stored {kept:,}")
+            if args.export:
+                count = export_notices(connection, args.export)
+                print(f"wrote {count:,} notices to {args.export}")
+        return 0
+
+    if (args.part is None) != (args.of is None):
+        parser.error("--part and --of go together")
+    if args.of is not None and not 1 <= args.part <= args.of:
+        parser.error("--part must be between 1 and --of")
 
     if args.refs:
         references = args.refs
@@ -188,8 +293,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"No legacy CSV files in {config.RAW_DIR}. Run: python -m pipeline.download")
             return 1
         references = targets(paths)
+        if args.of is not None:
+            all_references = references
+            references = (r for r in all_references if in_part(r, args.part, args.of))
 
-    with connect() as connection:
+    with connect(autocommit=True) as connection:
         counts = collect(
             connection,
             references,

@@ -78,7 +78,35 @@ function Questions() {
         <Question title="Can I share what I am looking at?">
           <p>
             Yes. Filters, search, sort order and view settings are part of the page address, so a
-            copied link opens the same view. “Mark as reviewed” is saved only in your browser.
+            copied link opens the same view. Every exported file and printed summary starts with a
+            note that a flag is not evidence of wrongdoing.
+          </p>
+        </Question>
+        <Question title="Who reviews flagged contracts?">
+          <p>
+            The ProcureGuard team. A reviewer checks a flagged contract against the public records
+            and records one of two outcomes: “explained”, when an ordinary reason was found, or
+            “needs follow-up”, when the records available could not explain the pattern. Neither is
+            a finding about any person. Every review is kept with the reviewer’s name and date, so
+            the history stays visible.
+          </p>
+        </Question>
+        <Question title="I represent a procuring entity or supplier. How do I respond?">
+          <p>
+            Use “Respond to this flag” on the contract’s page to email the team with records or
+            context. A reply is shown on the page only after the team has confirmed it came from the
+            organization.
+          </p>
+        </Question>
+        <Question title="How do I follow new flags?">
+          <p>
+            Contracts flagged in the latest scoring run that the run before did not flag are marked
+            “New”, and listed in an{' '}
+            <a href="/api/feed.xml" className="text-link">
+              RSS feed
+            </a>{' '}
+            that any feed reader can follow. Add <code>?region=</code> and a region name to the feed
+            address to follow one region.
           </p>
         </Question>
       </div>
@@ -113,10 +141,11 @@ function HowItWorks() {
       </div>
 
       <section>
-        <h3>The three indicators</h3>
+        <h3>The four indicators</h3>
         <p>
-          Each contract is measured on three indicators that the procurement literature and the
-          Philippine Competition Commission associate with weaker competition.
+          Each contract is measured on four indicators that the procurement literature, the
+          Philippine Competition Commission and the procurement rules associate with weaker
+          competition.
         </p>
         <div className="indicator-cards">
           {INDICATOR_ORDER.map((indicator) => (
@@ -139,10 +168,9 @@ function HowItWorks() {
         <p>
           No list of confirmed cases of wrongdoing exists for these contracts, so no model here is
           trained to recognise wrongdoing. The score comes from an Isolation Forest, an unsupervised
-          model that rates a contract by how easily it can be separated from the rest on the three
-          indicators. Scores run from 0 to 100, and the highest-scoring 5 percent are flagged. A
-          second, clustering-based model is scored alongside it so the study can compare the two;
-          its runs can be chosen in the run picker at the top of the page.
+          model that rates a contract by how easily it can be separated from the rest on the four
+          indicators. Scores run from 0 to 100, and the highest-scoring 5 percent are flagged.
+          Earlier scoring runs are kept, and each contract page names the run it was scored in.
         </p>
         <p>
           The explanation beside each score comes from SHAP values, which split a contract’s score
@@ -155,7 +183,17 @@ function HowItWorks() {
           share is set against the median for contracts in the same region and budget band. Awards
           cannot exceed the approved budget, so only a price above that median raises a score. A
           notice with more than one award for the same line item, or an amount under 20 percent of
-          its budget (most likely an entry error), is not compared on price.
+          its budget (most likely an entry error), is not compared on price. This shows how close an
+          award came to its budget ceiling. It cannot show that a project cost too much, because the
+          budget itself may be high, and PhilGEPS publishes no project type to compare like with
+          like.
+        </p>
+        <p>
+          The screening is retrospective: it looks back over a completed year. An entity’s share of
+          awards, groups of small-value awards and the comparable medians are all computed over the
+          whole year, so a contract awarded in January is described partly by awards made later. A
+          missing figure is filled with the typical value for the model, which tends to lower a
+          score slightly rather than raise it.
         </p>
         <p>
           A repeated winner is counted by bid notice, so a notice awarded in several lots counts as

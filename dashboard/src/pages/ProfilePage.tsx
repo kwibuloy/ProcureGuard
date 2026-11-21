@@ -11,6 +11,7 @@ import {
 import { BarList } from '../components/BarList';
 import { ContractTable } from '../components/ContractTable';
 import { Icon } from '../components/Icon';
+import { MonthBars } from '../components/MonthBars';
 import { Notice, SkeletonRows, Tile } from '../components/States';
 import {
   formatCount,
@@ -44,6 +45,13 @@ const WORDS = {
     listTitle: 'Contracts it won',
   },
 } as const;
+
+/**
+ * COA publishes annual audit reports per agency as PDFs. Its site blocks
+ * automated requests, so instead of a deep link this searches it for the name.
+ */
+const coaSearch = (name: string) =>
+  `https://www.google.com/search?${new URLSearchParams({ q: `site:coa.gov.ph "annual audit report" ${name}` })}`;
 
 /** Everything one procuring entity awarded, or one awardee won, in the shown run. */
 export function ProfilePage() {
@@ -143,6 +151,31 @@ export function ProfilePage() {
           }
         />
       </dl>
+
+      {kind === 'entity' && (
+        <p className="profile-links">
+          <a
+            className="button button-outline"
+            href={coaSearch(data.name)}
+            target="_blank"
+            rel="noreferrer"
+            title="Searches the Commission on Audit website for this agency's annual audit reports"
+          >
+            COA audit reports for this agency <Icon name="external" size={14} />
+          </a>
+        </p>
+      )}
+
+      {data.months && data.months.length > 1 && (
+        <section className="card">
+          <h2>Contracts by award month</h2>
+          <p className="card-note">
+            How many contracts it {words.verb} each month, and how many of them were flagged for
+            review.
+          </p>
+          <MonthBars months={data.months} />
+        </section>
+      )}
 
       <section className="card">
         <h2>{words.barsTitle}</h2>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export type Indicator = 'single_requester' | 'repeated_winner' | 'price_deviation';
+export type Indicator =
+  'single_requester' | 'repeated_winner' | 'price_deviation' | 'contract_splitting';
 export type Sort = 'rank' | 'amount' | 'recent';
 
 export interface Run {
@@ -53,6 +54,8 @@ export interface ContractRow {
   /** Total awarded across the notice's awards. */
   noticeAmount: number | null;
   mainReason: Indicator | null;
+  /** Flagged in this run but not in the previous one. */
+  isNew?: boolean;
   contributions: Partial<Record<Indicator, number>> | null;
   /** The figures behind each indicator, so the list can say why in words. */
   indicators: IndicatorResult[];
@@ -79,14 +82,6 @@ export interface IndicatorResult {
   value: number | null;
   contribution: number;
   context: Record<string, number | string>;
-}
-
-export interface OtherRunScore {
-  runId: number;
-  modelName: string;
-  score: number;
-  rank: number;
-  flagged: boolean;
 }
 
 export interface ContractDetail {
@@ -123,7 +118,6 @@ export interface ContractDetail {
   scoredContracts: number;
   documentRequests: number | null;
   indicators: IndicatorResult[];
-  otherRuns: OtherRunScore[];
 }
 
 export type ProfileKind = 'entity' | 'awardee';
@@ -141,29 +135,8 @@ export interface Profile {
   region: string | null;
   type: string | null;
   top: { key: string; name: string; contracts: number; flagged: number; value: number }[];
-}
-
-export interface Comparison {
-  a: Run;
-  b: Run;
-  contracts: number;
-  flaggedByBoth: number;
-  onlyA: number;
-  onlyB: number;
-  rankCorrelation: number | null;
-  topOverlap: { top: number; shared: number }[];
-  points: { id: number; a: number; b: number; flaggedA: boolean; flaggedB: boolean }[];
-  disagreements: {
-    id: number;
-    title: string;
-    entityName: string;
-    rankA: number;
-    rankB: number;
-    scoreA: number;
-    scoreB: number;
-    flaggedA: boolean;
-    flaggedB: boolean;
-  }[];
+  /** Contracts and flags by award month (YYYY-MM). */
+  months?: { month: string; contracts: number; flagged: number; value: number }[];
 }
 
 export interface DataQuality {
@@ -204,6 +177,11 @@ export interface ListQuery {
   awardee?: string;
   /** One row per bid notice. */
   grouped?: boolean;
+  /** Award date range, YYYY-MM-DD. */
+  awardFrom?: string;
+  awardTo?: string;
+  /** Only flags that are new in this run. */
+  newOnly?: boolean;
 }
 
 export const PAGE_SIZE = 25;
@@ -221,6 +199,9 @@ function listParams(query: ListQuery, run: number | null): URLSearchParams {
   if (query.scoreTo) params.set('scoreTo', query.scoreTo);
   if (query.entity) params.set('entity', query.entity);
   if (query.awardee) params.set('awardee', query.awardee);
+  if (query.awardFrom) params.set('awardFrom', query.awardFrom);
+  if (query.awardTo) params.set('awardTo', query.awardTo);
+  if (query.newOnly) params.set('new', 'true');
   if (query.flaggedOnly) params.set('flagged', 'true');
   if (query.sort !== 'rank') params.set('sort', query.sort);
   return params;

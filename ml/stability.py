@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     if len(contracts) < 20:
         print(f"Only {len(contracts)} contracts are stored; too few to score.")
         return 1
-    features = model_features(compute(contracts, base))
+    features = model_features(compute(contracts, base), base.missing_fill)
     rows, spread = stability(features, base)
     elapsed = time.perf_counter() - started
 

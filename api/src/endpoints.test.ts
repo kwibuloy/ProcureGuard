@@ -158,24 +158,43 @@ describe('GET /api/profile', () => {
   });
 });
 
-describe('GET /api/compare', () => {
-  it('needs two different runs that exist', async () => {
-    const { db } = fakeDb();
-    const app = createApp(db);
+describe('the new-flags feed', () => {
+  it('escapes published text and says a flag is not a finding', async () => {
+    const { db } = fakeDb([
+      {
+        id: 4,
+        title: 'Road <b>& bridge</b>',
+        entityName: 'Town "A"',
+        awardeeName: 'Builder & Co',
+        region: 'Region I',
+        score: 0.91,
+        rank: 2,
+      },
+    ]);
 
-    expect((await request(app).get('/api/compare').query({ a: 7, b: 7 })).status).toBe(400);
-    expect((await request(app).get('/api/compare').query({ a: 7 })).status).toBe(400);
-    expect((await request(app).get('/api/compare').query({ a: 7, b: 999 })).status).toBe(400);
-  });
-
-  it('compares the two runs asked for', async () => {
-    const { db, query } = fakeDb([{ contracts: 10 }]);
-
-    const response = await request(createApp(db)).get('/api/compare').query({ a: 7, b: 8 });
+    const response = await request(createApp(db)).get('/api/feed.xml');
 
     expect(response.status).toBe(200);
-    expect(response.body.a.id).toBe(7);
-    expect(response.body.b.id).toBe(8);
-    expect(callsMatching(query, 'rankCorrelation')[0]![1]).toEqual([7, 8]);
+    expect(response.headers['content-type']).toContain('application/rss+xml');
+    expect(response.text).toContain('Road &lt;b&gt;&amp; bridge&lt;/b&gt;');
+    expect(response.text).not.toContain('<b>');
+    expect(response.text).toContain('not evidence of wrongdoing');
+    expect(response.text).toContain('/contracts/4</link>');
+  });
+});
+
+describe('list filters for dates and new flags', () => {
+  it('passes award dates as parameters and ignores a malformed one', async () => {
+    const { db, query } = fakeDb();
+
+    await request(createApp(db))
+      .get('/api/contracts')
+      .query({ awardFrom: '2024-03-01', awardTo: '2024-13-45; DROP', new: 'true' });
+
+    const [sql, params] = query.mock.calls.find(([text]) => text.includes('award_date >='))!;
+    expect(params).toContain('2024-03-01');
+    expect(sql).not.toContain('award_date <=');
+    expect(sql).not.toContain('DROP');
+    expect(sql).toContain('NOT COALESCE(prev.is_flagged, FALSE)');
   });
 });

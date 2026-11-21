@@ -1,10 +1,8 @@
-"""The two unsupervised models being compared. Both give one number per contract:
-higher means more statistically unusual. Neither is trained on labels."""
+"""The unsupervised model. It gives one number per contract: higher means more
+statistically unusual. It is not trained on labels, because none exist."""
 
 import numpy as np
-from sklearn.cluster import KMeans
 from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import RobustScaler
 
 from ml.settings import Settings
 
@@ -27,52 +25,7 @@ class IsolationForestModel:
         return -self._forest.score_samples(features)
 
 
-class ClusteringModel:
-    """Distance from the nearest large cluster of ordinary contracts.
-
-    K-means will happily form a tiny cluster around a few extreme contracts, which
-    would put them at distance zero from "their" centre. So only the large
-    clusters, which together hold most contracts, count as ordinary (the idea
-    behind the cluster-based local outlier factor, CBLOF).
-    """
-
-    key = "clustering"
-    name = "Clustering distance"
-    # The largest clusters that together hold this share of contracts are "large".
-    LARGE_CLUSTER_COVERAGE = 0.9
-
-    def __init__(self, settings: Settings):
-        self.parameters = {
-            "n_clusters": settings.clusters,
-            "scaling": "median and IQR",
-            "large_cluster_coverage": self.LARGE_CLUSTER_COVERAGE,
-        }
-        self._scaler = RobustScaler()
-        self._clusters = KMeans(
-            n_clusters=settings.clusters, n_init=10, random_state=settings.random_seed
-        )
-        self._large_centres = np.empty((0, 0))
-
-    def fit(self, features: np.ndarray) -> None:
-        distinct = len(np.unique(features, axis=0))
-        self._clusters.set_params(n_clusters=max(1, min(self._clusters.n_clusters, distinct)))
-        labels = self._clusters.fit_predict(self._scaler.fit_transform(features))
-        sizes = np.bincount(labels, minlength=self._clusters.n_clusters)
-        by_size = np.argsort(-sizes, kind="stable")
-        covered = np.cumsum(sizes[by_size]) / len(features)
-        large = by_size[: int(np.searchsorted(covered, self.LARGE_CLUSTER_COVERAGE) + 1)]
-        self._large_centres = self._clusters.cluster_centers_[large]
-
-    def raw_score(self, features: np.ndarray) -> np.ndarray:
-        scaled = self._scaler.transform(features)
-        gaps = scaled[:, None, :] - self._large_centres[None, :, :]
-        distances = np.sqrt((gaps**2).sum(axis=2)).min(axis=1)
-        # Distances have a long tail; the log keeps one extreme contract from
-        # flattening every other score.
-        return np.log1p(distances)
-
-
-MODELS = {model.key: model for model in (IsolationForestModel, ClusteringModel)}
+MODELS = {IsolationForestModel.key: IsolationForestModel}
 
 
 class ScaledModel:

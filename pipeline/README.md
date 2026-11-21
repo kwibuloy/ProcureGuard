@@ -29,6 +29,8 @@ Run from the repo root with the virtual environment's Python.
 | Clean, standardize, collapse to contracts and load PostgreSQL | `python -m pipeline.load` |
 | Report data quality from the database | `python -m pipeline.quality` |
 | Collect document request counts from notice pages | `python -m pipeline.notices` |
+| Every step at once when a new quarter is out: migrate, download, load, notices, score | `python -m pipeline.refresh` (`--no-scrape` to skip notices) |
+| Load the committed counts instead of scraping | `python -m pipeline.notices --import data/notices/bid_notices_2024.csv` |
 | Load demonstration contracts for the dashboard | `python -m pipeline.demo` |
 
 Order for real data: `migrate`, `download`, `load`, `notices`, then score (`ml/README.md`).
@@ -36,6 +38,15 @@ Order for real data: `migrate`, `download`, `load`, `notices`, then score (`ml/R
 `download` never overwrites a file already in `data/raw/`, resumes an interrupted download, and records each file's size and SHA-256 in `data/raw/manifest.json`. About 1.4 GB for 2024. Google Drive throttles these downloads to a few KB/s after a short burst; the downloader then stops and keeps its `.part` file, so run it again later to continue.
 
 `notices` fetches 100 notices per run by default, two seconds apart, and stores each result in `bid_notices`. Stored notices are skipped, so it can be stopped and restarted. `--all` fetches every remaining notice; `--refs` fetches named references. It stops by itself if the site fails repeatedly.
+
+**Splitting the scrape between two people.** Each person needs the same `data/raw/` downloads (check `manifest.json`). Each runs one half, at the usual pace, never more than one copy each:
+
+```
+.venv\Scripts\python -m pipeline.notices --all --part 1 --of 2     (first person)
+.venv\Scripts\python -m pipeline.notices --all --part 2 --of 2     (second person)
+```
+
+A notice's half depends only on its reference number: for 2024 that is 40,200 and 40,222 notices. Results stay in each person's own database, so share them as files. `--export data/notices/part1.csv` writes every stored notice (reference, status and counts only, no names), which can be committed. `--import data/notices/part2.csv` adds a partner's export and keeps any notice already stored. Import both halves into the database that will be scored.
 
 `load` keeps awarded civil works contracts only, one per award. Every row left out is counted by reason, and the counts are stored in `load_reports` for the dashboard's data quality page. Missing or unreadable values stay missing. It refuses to run while demonstration contracts are in the database.
 

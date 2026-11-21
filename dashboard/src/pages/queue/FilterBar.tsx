@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { ListQuery, Overview } from '../../api';
 import { Icon } from '../../components/Icon';
 import { INDICATOR_ORDER, INDICATORS } from '../../indicators';
-import { SORT_LABELS, sheetFilterCount, type Chip } from './query';
+import { PERIODS, SORT_LABELS, sheetFilterCount, type Chip } from './query';
 
 /** Search, the region, entity type, reason and sort fields, and the active-filter chips. */
 export function FilterBar({
@@ -118,6 +118,34 @@ export function FilterBar({
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="field">
+                <span className="visually-hidden">Award date</span>
+                <select
+                  value={`${query.awardFrom ?? ''}|${query.awardTo ?? ''}`}
+                  onChange={(event) => {
+                    const [awardFrom = '', awardTo = ''] = event.target.value.split('|');
+                    update({ awardFrom, awardTo });
+                  }}
+                >
+                  <option value="|">Any award date</option>
+                  {PERIODS.map((period) => (
+                    <option key={period.label} value={`${period.from}|${period.to}`}>
+                      {period.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className="field field-check"
+                title="Flagged in this scoring run but not in the one before"
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(query.newOnly)}
+                  onChange={(event) => update({ new: event.target.checked ? '1' : '' })}
+                />
+                <span>New flags only</span>
               </label>
               <label className="field field-sort">
                 <span className="visually-hidden">Sort order</span>

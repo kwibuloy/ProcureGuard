@@ -41,7 +41,7 @@ def _coalition_values(score, features: np.ndarray, background: np.ndarray) -> di
 def contributions(score, features: np.ndarray, settings: Settings) -> tuple[np.ndarray, float]:
     """Return (one contribution per contract and indicator, the base value).
 
-    With three indicators every combination can be evaluated, so the Shapley
+    With four indicators every combination (16) can be evaluated, so the Shapley
     values are exact: base value + the contributions of a contract = its score.
     The base value is the average score of a sample of typical contracts.
 

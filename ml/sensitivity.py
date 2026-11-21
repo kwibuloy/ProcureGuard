@@ -1,13 +1,12 @@
 """Re-score with alternative study settings and measure how far the flagged set moves.
 
-Run with: python -m ml.sensitivity                    (Isolation Forest)
-          python -m ml.sensitivity --model clustering
+Run with: python -m ml.sensitivity
 
 Each alternative in ml/settings.py (SENSITIVITY_VARIANTS) changes one decision:
 budget bands, the share flagged, the smallest comparable group, or the smallest
 entity for repeated winner. Indicators are recomputed and the model refitted
 for each, then compared with the default settings. Writes
-data/processed/sensitivity_<model>.csv and .json. Stored runs are not changed.
+data/processed/sensitivity_isolation-forest.csv and .json. Stored runs are not changed.
 """
 
 import argparse
@@ -21,6 +20,8 @@ from ml.models import MODELS
 from ml.robustness import compare, print_table, score_with, write_outputs
 from ml.settings import ROBUSTNESS_TOP_N, SENSITIVITY_VARIANTS, Settings, variant
 from pipeline.db import connect
+
+MODEL = "isolation-forest"
 
 
 def sensitivity(
@@ -46,8 +47,7 @@ def sensitivity(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--model", choices=list(MODELS), default="isolation-forest")
-    args = parser.parse_args(argv)
+    parser.parse_args(argv)
     base = Settings()
 
     started = time.perf_counter()
@@ -56,16 +56,16 @@ def main(argv: list[str] | None = None) -> int:
     if len(contracts) < 20:
         print(f"Only {len(contracts)} contracts are stored; too few to score.")
         return 1
-    rows = sensitivity(contracts, args.model, base)
+    rows = sensitivity(contracts, MODEL, base)
     elapsed = time.perf_counter() - started
 
-    print(f"\nSensitivity of {MODELS[args.model].name} on {len(contracts):,} contracts")
+    print(f"\nSensitivity of {MODELS[MODEL].name} on {len(contracts):,} contracts")
     print_table(rows, "variant")
     csv_path, json_path = write_outputs(
-        f"sensitivity_{args.model}",
+        f"sensitivity_{MODEL}",
         rows,
         {
-            "model": MODELS[args.model].name,
+            "model": MODELS[MODEL].name,
             "contracts": len(contracts),
             "default_settings": base.as_dict(),
             "top_n": list(ROBUSTNESS_TOP_N),

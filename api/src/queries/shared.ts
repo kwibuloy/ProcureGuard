@@ -4,7 +4,12 @@ import type { Pool } from 'pg';
 /** The minimal part of pg's Pool the API uses, so tests can pass a fake. */
 export type Db = Pick<Pool, 'query'>;
 
-export const INDICATORS = ['single_requester', 'repeated_winner', 'price_deviation'] as const;
+export const INDICATORS = [
+  'single_requester',
+  'repeated_winner',
+  'price_deviation',
+  'contract_splitting',
+] as const;
 export type Indicator = (typeof INDICATORS)[number];
 
 export const SORTS = {
@@ -22,6 +27,21 @@ export const GROUPED_SORTS: Record<Sort, string> = {
 };
 
 // One key per bid notice; an award made without a notice is its own.
+/**
+ * The same model's scoring run before this one, to tell which flags are new.
+ * Demo runs are compared only with demo runs. Null for the first run.
+ */
+export async function previousRunId(db: Db, runId: number): Promise<number | null> {
+  const { rows } = await db.query(
+    `SELECT max(p.id)::int AS id FROM scoring_runs p
+     JOIN scoring_runs cur ON cur.id = $1
+     WHERE p.id < cur.id AND p.model_name = cur.model_name AND p.is_demo = cur.is_demo`,
+    [runId],
+  );
+  const id = rows[0]?.id;
+  return Number.isInteger(id) ? (id as number) : null;
+}
+
 export const NOTICE_KEY = `COALESCE(c.source_series || ':' || c.bid_reference_no, 'award:' || c.id)`;
 
 export interface ListFilters {
@@ -37,7 +57,12 @@ export interface ListFilters {
   reason?: Indicator;
   scoreFrom?: number;
   scoreTo?: number;
+  /** Award date on or after / on or before, as YYYY-MM-DD. */
+  awardFrom?: string;
+  awardTo?: string;
   flaggedOnly: boolean;
+  /** Only contracts flagged in this run that the previous run did not flag. */
+  newOnly?: boolean;
   sort: Sort;
   page: number;
   pageSize: number;

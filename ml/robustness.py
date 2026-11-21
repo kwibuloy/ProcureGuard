@@ -37,7 +37,8 @@ def scoring(features: pd.DataFrame, model_key: str, settings: Settings) -> Scori
 
 def score_with(contracts: pd.DataFrame, model_key: str, settings: Settings) -> Scoring:
     """Recompute the indicators under `settings`, then score."""
-    return scoring(model_features(compute(contracts, settings)), model_key, settings)
+    features = model_features(compute(contracts, settings), settings.missing_fill)
+    return scoring(features, model_key, settings)
 
 
 def jaccard(a: np.ndarray, b: np.ndarray) -> float:

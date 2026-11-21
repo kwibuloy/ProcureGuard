@@ -1,10 +1,8 @@
 """Score every contract and store the results as a new scoring run.
 
-Run with: python -m ml.score                          (both models)
-          python -m ml.score --model isolation-forest
-          python -m ml.score --model clustering
+Run with: python -m ml.score
 
-Computes the three indicators, fits the model, explains each score with SHAP,
+Computes the four indicators, fits the Isolation Forest, explains each score with SHAP,
 and writes scores and contributions to PostgreSQL. Earlier runs are kept.
 """
 
@@ -25,6 +23,7 @@ from ml.settings import INDICATORS, Settings
 from pipeline.db import connect
 
 DEMO_SOURCE = "DEMO"
+MODEL = "isolation-forest"
 
 
 @dataclass
@@ -163,8 +162,7 @@ def report(run_id: int, contracts, indicators, result: Result) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--model", choices=[*MODELS, "both"], default="both")
-    args = parser.parse_args(argv)
+    parser.parse_args(argv)
     settings = Settings()
 
     with connect() as connection:
@@ -173,11 +171,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Only {len(contracts)} contracts are stored; too few to score.")
             return 1
         indicators = compute(contracts, settings)
-        features = model_features(indicators)
-        for key in MODELS if args.model == "both" else [args.model]:
-            result = score_contracts(features, key, settings)
-            run_id = store(connection, contracts, indicators, result, settings)
-            report(run_id, contracts, indicators, result)
+        features = model_features(indicators, settings.missing_fill)
+        result = score_contracts(features, MODEL, settings)
+        run_id = store(connection, contracts, indicators, result, settings)
+        report(run_id, contracts, indicators, result)
     print(
         "\nA high score means a contract is statistically unusual on these indicators."
         " It is not evidence of wrongdoing."
