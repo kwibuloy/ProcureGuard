@@ -297,7 +297,9 @@ def compute(contracts: pd.DataFrame, settings: Settings) -> dict[str, pd.DataFra
     return {name: function(contracts, settings) for name, function in COMPUTE.items()}
 
 
-def model_features(indicators: dict[str, pd.DataFrame]) -> pd.DataFrame:
+def model_features(
+    indicators: dict[str, pd.DataFrame], missing_fill: str = "median"
+) -> pd.DataFrame:
     """The numbers the model sees, one column per indicator.
 
     Document requests are inverted (1 request -> 1.0, 10 requests -> 0.1) so that
@@ -307,9 +309,12 @@ def model_features(indicators: dict[str, pd.DataFrame]) -> pd.DataFrame:
     the red flags this study looks for (it is mostly partial awards and data entry
     errors). The stored indicator value keeps its sign. Contract splitting is 0
     unless the contract is part of a group. A
-    missing value is replaced by the median of its column, the most typical value,
-    so that it neither raises nor lowers the score much. The stored indicator
-    value stays missing.
+    missing value is replaced by the median of its column by default. This is a
+    practical assumption, not a neutral one: on the 2024 data a missing value
+    lowers a contract's score by about 4 to 6 points on average, so missing data
+    never pushes a contract up but can hide one. missing_fill="no_sign" fills it
+    with the value meaning no red flag instead. The stored indicator value stays
+    missing.
     """
     features = pd.DataFrame(
         {
@@ -320,4 +325,8 @@ def model_features(indicators: dict[str, pd.DataFrame]) -> pd.DataFrame:
             CONTRACT_SPLITTING: indicators[CONTRACT_SPLITTING]["value"].fillna(0.0),
         }
     ).astype(float)
+    if missing_fill == "no_sign":
+        return features.fillna(0.0)
+    if missing_fill != "median":
+        raise ValueError(f"unknown missing_fill {missing_fill!r}")
     return features.fillna(features.median().fillna(0.0))

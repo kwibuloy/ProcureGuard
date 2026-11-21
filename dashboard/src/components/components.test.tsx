@@ -88,7 +88,9 @@ describe('ContractTable', () => {
     expect(
       screen.getByText('Only 1 supplier requested the bidding documents; a typical notice had 6.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Also raised the score: unusual price +4.0')).toBeInTheDocument();
+    expect(
+      screen.getByText('Also raised the score: high award-to-budget ratio +4.0'),
+    ).toBeInTheDocument();
   });
 
   it('says so when no indicator raised the score', () => {

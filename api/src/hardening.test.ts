@@ -213,7 +213,9 @@ describe('CSV export size', () => {
     expect(response.headers['x-export-truncated']).toBe('true');
     expect(response.headers['content-disposition']).toContain('first-3');
     // It asks for one row more than the limit, to know whether there were more.
-    const exportCall = query.mock.calls.find(([sql]) => sql.includes('points_unusual_price'))!;
+    const exportCall = query.mock.calls.find(([sql]) =>
+      sql.includes('points_high_award_to_budget_ratio'),
+    )!;
     expect(exportCall[0]).toContain('LIMIT 4');
   });
 

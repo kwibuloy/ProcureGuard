@@ -359,3 +359,17 @@ def test_price_context_names_the_comparable_group():
     assert context["comparable_basis"] == "same region and budget band"
     assert context["comparable_band"] == 1  # 1M to 5M
     assert context["comparable_region"] == "Region I"
+
+
+def test_missing_values_can_be_filled_as_no_red_flag():
+    frame = contracts(
+        [{"document_requests": 1.0}, {"document_requests": 5.0}, {"document_requests": None}]
+    )
+    indicators = compute(frame, SETTINGS)
+
+    assert model_features(indicators)[SINGLE_REQUESTER][2] == pytest.approx(
+        0.6
+    )  # median of 1.0, 0.2
+    assert model_features(indicators, "no_sign")[SINGLE_REQUESTER][2] == 0.0
+    with pytest.raises(ValueError):
+        model_features(indicators, "guess")

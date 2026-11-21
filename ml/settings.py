@@ -35,6 +35,11 @@ class Settings:
     # agencies and the largest LGUs; LGU ceilings are lower, but the data has no
     # LGU income class, so the highest ceiling is used for every entity).
     splitting_ceiling: float = 1_000_000
+    # How a missing indicator value is filled for the model: "median" (the typical
+    # value of the column) or "no_sign" (the value meaning no red flag: many
+    # document requests, no concentration, no price above the median). Neither is
+    # neutral; the sensitivity check measures how much the choice matters.
+    missing_fill: str = "median"
     # Share of scored contracts shown as flagged for review.
     flag_share: float = 0.05
     random_seed: int = 2024
@@ -93,6 +98,8 @@ SENSITIVITY_VARIANTS: tuple[tuple[str, dict], ...] = (
     ("splitting_window_60d", {"splitting_window_days": 60}),
     ("splitting_ceiling_500k", {"splitting_ceiling": 500_000}),
     ("splitting_ceiling_2m", {"splitting_ceiling": 2_000_000}),
+    # Missing indicator values filled with "no red flag" instead of the median.
+    ("missing_no_sign", {"missing_fill": "no_sign"}),
 )
 
 # Seeds for the Isolation Forest seed-stability check; the default seed is compared with each.

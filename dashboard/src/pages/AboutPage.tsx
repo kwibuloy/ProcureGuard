@@ -183,7 +183,17 @@ function HowItWorks() {
           share is set against the median for contracts in the same region and budget band. Awards
           cannot exceed the approved budget, so only a price above that median raises a score. A
           notice with more than one award for the same line item, or an amount under 20 percent of
-          its budget (most likely an entry error), is not compared on price.
+          its budget (most likely an entry error), is not compared on price. This shows how close an
+          award came to its budget ceiling. It cannot show that a project cost too much, because the
+          budget itself may be high, and PhilGEPS publishes no project type to compare like with
+          like.
+        </p>
+        <p>
+          The screening is retrospective: it looks back over a completed year. An entity’s share of
+          awards, groups of small-value awards and the comparable medians are all computed over the
+          whole year, so a contract awarded in January is described partly by awards made later. A
+          missing figure is filled with the typical value for the model, which tends to lower a
+          score slightly rather than raise it.
         </p>
         <p>
           A repeated winner is counted by bid notice, so a notice awarded in several lots counts as

@@ -171,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Only {len(contracts)} contracts are stored; too few to score.")
             return 1
         indicators = compute(contracts, settings)
-        features = model_features(indicators)
+        features = model_features(indicators, settings.missing_fill)
         result = score_contracts(features, MODEL, settings)
         run_id = store(connection, contracts, indicators, result, settings)
         report(run_id, contracts, indicators, result)

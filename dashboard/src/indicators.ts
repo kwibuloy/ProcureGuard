@@ -33,11 +33,11 @@ export const INDICATORS: Record<Indicator, IndicatorInfo> = {
       'A high share can have ordinary causes, such as few qualified contractors in a remote area. It cannot show how the awardee came to win.',
   },
   price_deviation: {
-    label: 'Unusual price',
+    label: 'High award-to-budget ratio',
     measures:
-      'How far above the median of comparable contracts the awarded price sits, as a share of the budget. Awards cannot exceed the approved budget, so only a price above the median raises a score.',
+      'How far the award, as a share of its approved budget, sits above the median share of comparable contracts (same region and budget band). Awards cannot exceed the approved budget, so only a ratio above the median raises a score.',
     limit:
-      'Comparable contracts are grouped from published fields only. Differences in scope or site conditions that are not in the data can explain a deviation.',
+      'This measures how close an award is to its budget ceiling, not whether the project cost too much: the budget itself may be high or low. PhilGEPS publishes no project type, so a road and a school building with similar budgets in one region are compared, and differences in scope or site conditions can explain a deviation.',
   },
   contract_splitting: {
     label: 'Grouped small-value awards',

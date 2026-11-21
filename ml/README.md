@@ -45,13 +45,13 @@ All in `settings.py`. Each is a default I chose, pending the team's confirmation
 
 - **Few document requests** (`single_requester`): the notice's document request count. It is a proxy for competition, never called a bid count. The model sees `1 / count`, so only low counts are extreme.
 - **Repeated winner**: the share of the procuring entity's bid notices that were awarded to this awardee. Counted by notice, not by award record, so a notice awarded in several lots, or posted with several award notices, is one win.
-- **Unusual price** (`price_deviation`): the awarded amount as a share of the approved budget, relative to the median share among comparable contracts. When a notice is awarded in several lots that share one budget, the lots are summed first. The model sees only the part above the median (below it counts as 0): an award cannot exceed the approved budget, so nearly all room to differ is downward, and a low price is not one of the red flags studied; at the low end it is mostly partial awards and data entry errors. The dashboard still shows the signed value. Left missing when:
+- **High award-to-budget ratio** (`price_deviation`, called unusual price before November 2026): the awarded amount as a share of the approved budget, relative to the median share among comparable contracts. When a notice is awarded in several lots that share one budget, the lots are summed first. The model sees only the part above the median (below it counts as 0): an award cannot exceed the approved budget, so nearly all room to differ is downward, and a low price is not one of the red flags studied; at the low end it is mostly partial awards and data entry errors. The dashboard still shows the signed value. Left missing when:
   - one line item of the notice has more than one award notice (all to the same awardee in 2024; 96 notices). PhilGEPS does not say which one is in force, and adding them up produced totals of up to 391% of budget;
   - the result is below the implausibly low price floor above.
 
 - **Grouped small-value awards** (`contract_splitting`): for a Small Value Procurement award, the number of such notices the same entity awarded to the same supplier within 30 days (this one included), when their approved budgets together exceed the ceiling above; 0 when there is no such group. Splitting a contract to evade public bidding is prohibited by Section 54.1 of the IRR. The data cannot show intent, so this is a pattern for review only. Counted by notice, so lots of one notice are one award. Missing for other procurement modes and when the award date is not published; the model sees 0 for those.
 
-A value that cannot be computed is stored as missing with the reason in `context.why_missing`. The model treats it as the typical (median) value so that it neither raises nor lowers the score much.
+A value that cannot be computed is stored as missing with the reason in `context.why_missing`. The model fills it with the column's median. That is a practical assumption, not a neutral one: on the 2024 data a missing value lowers a contract's score on average by 5.6 points (document requests), 3.7 (repeated winner) and 5.6 (price), so missing data never pushes a contract up but can hide one. `missing_fill` in `settings.py` switches to filling it as no red flag, and the sensitivity check measures the difference (row `missing_no_sign` below).
 
 ## The model
 
@@ -80,7 +80,7 @@ These compare two scorings of the same contracts. They say how much a result dep
 
 ### Measured on the 2024 data (21 November 2026)
 
-90,204 contracts, four indicators, with document request counts for all 80,422 public bidding notices (82,715 contracts). The default settings reproduce stored runs 26 and 27 (4,511 flagged). Main reason among flagged contracts: unusual price 2,031, repeated winner 1,545, grouped small-value awards 935, few document requests 0.
+90,204 contracts, four indicators, with document request counts for all 80,422 public bidding notices (82,715 contracts). The default settings reproduce stored runs 26 and 27 (4,511 flagged). Main reason among flagged contracts: high award-to-budget ratio 2,031, repeated winner 1,545, grouped small-value awards 935, few document requests 0.
 
 Few document requests is the main reason for no flagged contract because a low count is common: 31% of notices had at most one request (the median is 3), and the Isolation Forest isolates rare combinations, so a value shared by a third of contracts is not unusual on its own. It still adds points where it combines with other indicators.
 
@@ -102,6 +102,7 @@ Sensitivity, Isolation Forest (82 s):
 | Splitting window 60 days | 4,511 | 0.871 | 0.931 | 0.50 | 0.836 | 0.985 |
 | Splitting ceiling PHP 500,000 | 4,511 | 0.899 | 0.947 | 1.00 | 0.930 | 0.984 |
 | Splitting ceiling PHP 2,000,000 | 4,511 | 0.830 | 0.907 | 0.87 | 0.744 | 0.971 |
+| Missing values filled as no red flag | 4,526 | 0.826 | 0.907 | 0.90 | 0.796 | 0.912 |
 
 As before, the share flagged moves only the cut-off and the smallest comparable group barely matters. Budget bands and the smallest entity for repeated winner move the most: each keeps 84% to 90% of the default's flags. The splitting window and ceiling keep 91% to 95%; a 60-day window reshuffles the very top (top 100 overlap 0.50) because more small-value groups reach the top of the ranking.
 
@@ -115,6 +116,21 @@ Seed stability, Isolation Forest, 10 seeds (26 s). Default seed 2024 against the
 | Spearman | 0.987 | 0.992 | 0.995 |
 
 The overall ranking hardly depends on the seed, and about nine in ten flags stay whichever seed is used; the top 100 is steadier than with three indicators (mean overlap 0.85, was 0.78). The difference between rank 40 and rank 140 still should not be read as meaningful.
+
+## Independent check
+
+The PCC check (`/validate-flags`) looks at the same patterns the indicators measure, so it shows consistency, not independent support. `python -m ml.independent` compares flagged and unflagged notices, matched by procurement mode, region and budget band, on two procedural rules the model never sees (publication and closing dates against the posting periods of the 2016 Revised IRR). `--blind-sheet` also writes 20 top flagged and 20 matched unflagged notices, shuffled under neutral IDs, for a manual review that does not know which group each notice is in, with the key in a separate file. Output in `data/processed/`.
+
+Measured on the 2024 data (86,784 notices, 3,937 flagged):
+
+| Check | Flagged | Unflagged, matched |
+|---|---|---|
+| Closed before the posting period ended (7 days, or 3 for Small Value Procurement) | 0 of 3,887 | 0.0% |
+| Public bidding open longer than the Section 25.5 maximum | 7 of 2,941 (0.2%) | 1.1% |
+
+No notice in the year closed early: every public bidding notice stayed open at least exactly 7 days and every Small Value request at least 3, so PhilGEPS appears to enforce the minimum and the check cannot tell notices apart. Flagged notices were not more likely to exceed the maximum period either. On the independent measures available, the flagged set shows no enrichment: the flags describe award patterns, not procedural deviations.
+
+The scores are also retrospective: repeated-winner shares, splitting groups (30 days either side) and comparable medians use the whole year, so a contract is described partly by awards made after it. Real-time screening would need features computed only from transactions known at the award date.
 
 ## Tests
 

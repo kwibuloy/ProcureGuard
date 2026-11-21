@@ -149,7 +149,7 @@ export async function exportContracts(
             round(((r.contributions->>'repeated_winner')::numeric * 100), 2)::float8
               AS points_repeated_winner,
             round(((r.contributions->>'price_deviation')::numeric * 100), 2)::float8
-              AS points_unusual_price,
+              AS points_high_award_to_budget_ratio,
             round(((r.contributions->>'contract_splitting')::numeric * 100), 2)::float8
               AS points_small_value_awards_grouped
      ${LIST_FROM}
