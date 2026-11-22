@@ -43,7 +43,7 @@ export function PricePeers({ contractId, runId }: { contractId: number; runId: n
   const share = data.below / data.peers;
 
   return (
-    <section className="price-peers">
+    <section className="price-peers" id="case-price" data-case="Price">
       <h3>Price compared with similar contracts</h3>
       <p className="section-note">
         Awarded at {formatPercent(data.ratio, 1)} of its budget. Among {formatCount(data.peers)}{' '}

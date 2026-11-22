@@ -1,0 +1,185 @@
+/* ProcureGuard design system: tokens.
+
+   Neubrutalist: warm paper, solid ink outlines, hard offset shadows, one accent.
+   Every colour, border, shadow, radius, space, type size and timing used by the
+   dashboard is defined here. Components read these tokens and nothing else.
+
+   Colour carries meaning in exactly three places:
+   - accent (cyan): the action to take, the item selected, keyboard focus.
+   - raises / lowers (red / blue): an indicator moved a score up or down.
+     They appear only in score explanations, never as decoration.
+   - ink shades: data marks (flagged bars, map shading, score meters).
+   Nothing is styled as an alarm: a flag is a prompt to review. */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --paper: #fafaf9; /* page */
+  --surface: #ffffff; /* cards, panels, inputs */
+  --surface-2: #f5f5f4; /* wells: table heads, tracks, inactive tabs */
+  --surface-3: #e7e5e4; /* skeletons, pressed wells */
+
+  /* Ink, in three strengths. All pass WCAG AA on --surface and --paper. */
+  --ink: #0c0a09;
+  --ink-2: #57534e;
+  --ink-3: #6f6964;
+  --on-ink: #fafaf9; /* text on an ink fill */
+
+  /* Outlines and shadows */
+  --line: #0c0a09; /* the structural outline */
+  --hairline: #e7e5e4; /* dividers inside a card */
+  --hairline-strong: #d6d3d1;
+  --shadow-color: #0c0a09;
+
+  /* The one accent */
+  --accent: #3ba6f1;
+  --accent-hover: #5bb5f4;
+  --accent-wash: #c1e1f7;
+  --accent-soft: #e6f3fc;
+  --accent-text: #0b5f9e; /* accent as text: 6.3:1 on white */
+  --on-accent: #0c0a09; /* text on the accent fill: 7.9:1 */
+  --focus: #0b74c4;
+
+  /* Data */
+  --mark: #0c0a09; /* flagged bars, meters */
+  --mark-muted: #d6d3d1; /* below the flagging score */
+  --raises: #e34948;
+  --lowers: #2a78d6;
+
+  /* Notes: demonstration data, cautions. A warm neutral, not a warning. */
+  --note-bg: #fdf3d7;
+  --note-ink: #3f3104;
+
+  --scrim: rgba(12, 10, 9, 0.48);
+
+  /* Borders */
+  --bw: 2px;
+  --bw-thin: 1.5px;
+  --border: var(--bw) solid var(--line);
+
+  /* Hard offset shadows: depth without blur */
+  --shadow-xs: 2px 2px 0 var(--shadow-color);
+  --shadow-sm: 3px 3px 0 var(--shadow-color);
+  --shadow: 5px 5px 0 var(--shadow-color);
+  --shadow-lg: 8px 8px 0 var(--shadow-color);
+  --shadow-xl: 12px 12px 0 var(--shadow-color);
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+
+  /* Space: a 4px base */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 56px;
+  --s-10: 72px;
+  --s-11: 96px;
+
+  --page-width: 1320px;
+  --topbar-height: 68px;
+
+  /* Type. Display: Space Grotesk. Text: Inter. Mono only for keys and code. */
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', system-ui, sans-serif;
+  --font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+
+  --t-xs: 12px;
+  --t-sm: 13px;
+  --t-base: 15px;
+  --t-md: 17px;
+  --t-lg: 20px;
+  --t-xl: 26px;
+  --t-2xl: 34px;
+  --t-3xl: clamp(36px, 5vw, 60px);
+  --t-hero: clamp(64px, 9vw, 120px);
+
+  /* Weights: nothing lighter than regular. */
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-semibold: 600;
+  --w-bold: 700;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-swing: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 360ms;
+  --dur-4: 560ms;
+
+  --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%230c0a09' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* Dark: the same system on soot. Outlines turn light; shadows stay hard. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --paper: #12100e;
+    --surface: #1c1917;
+    --surface-2: #26221f;
+    --surface-3: #35302c;
+    --ink: #fafaf9;
+    --ink-2: #d6d3d1;
+    --ink-3: #b4aea8;
+    --on-ink: #0c0a09;
+    --line: #d6d3d1;
+    --hairline: #35302c;
+    --hairline-strong: #4a443f;
+    --shadow-color: #5a534d;
+    --accent: #4db1f5;
+    --accent-hover: #6fc0f7;
+    --accent-wash: #173a55;
+    --accent-soft: #142c40;
+    --accent-text: #8fcdf8;
+    --focus: #8fcdf8;
+    --mark: #fafaf9;
+    --mark-muted: #4a443f;
+    --raises: #e66767;
+    --lowers: #3987e5;
+    --note-bg: #2d2610;
+    --note-ink: #f3e5b5;
+    --scrim: rgba(0, 0, 0, 0.66);
+    --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23fafaf9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #12100e;
+  --surface: #1c1917;
+  --surface-2: #26221f;
+  --surface-3: #35302c;
+  --ink: #fafaf9;
+  --ink-2: #d6d3d1;
+  --ink-3: #b4aea8;
+  --on-ink: #0c0a09;
+  --line: #d6d3d1;
+  --hairline: #35302c;
+  --hairline-strong: #4a443f;
+  --shadow-color: #5a534d;
+  --accent: #4db1f5;
+  --accent-hover: #6fc0f7;
+  --accent-wash: #173a55;
+  --accent-soft: #142c40;
+  --accent-text: #8fcdf8;
+  --focus: #8fcdf8;
+  --mark: #fafaf9;
+  --mark-muted: #4a443f;
+  --raises: #e66767;
+  --lowers: #3987e5;
+  --note-bg: #2d2610;
+  --note-ink: #f3e5b5;
+  --scrim: rgba(0, 0, 0, 0.66);
+  --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23fafaf9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}

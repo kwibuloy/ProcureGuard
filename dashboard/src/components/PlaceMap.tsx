@@ -103,7 +103,25 @@ const Shapes = memo(function Shapes({
               event.preventDefault();
               onPick(shape.code);
             }
+            // Arrow keys step from place to place, as Tab does.
+            const step =
+              event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                ? 1
+                : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                  ? -1
+                  : 0;
+            if (step) {
+              event.preventDefault();
+              const all = [
+                ...(event.currentTarget.parentElement?.querySelectorAll<SVGPathElement>(
+                  '.map-shape',
+                ) ?? []),
+              ];
+              all[(all.indexOf(event.currentTarget) + step + all.length) % all.length]?.focus();
+            }
           }}
+          onFocus={() => onHover(shape.code)}
+          onBlur={() => onHover(null)}
           onPointerEnter={(event) => event.pointerType === 'mouse' && onHover(shape.code)}
           onPointerLeave={(event) => event.pointerType === 'mouse' && onHover(null)}
         />
@@ -354,6 +372,14 @@ export function PlaceMap({
           ) : drawn ? (
             <svg
               viewBox={`0 0 ${MAP_WIDTH} ${drawn.height}`}
+              // A new level draws a new map, which zooms in as it appears.
+              key={
+                level.kind === 'country'
+                  ? 'country'
+                  : level.kind === 'region'
+                    ? `r${level.region}`
+                    : `p${level.province}`
+              }
               className={`map-svg ${figuresReady || level.kind === 'country' ? '' : 'is-waiting'}`}
               role="group"
               aria-label="Map of flagged contracts"

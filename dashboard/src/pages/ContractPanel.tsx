@@ -7,8 +7,13 @@ import { ContributionChart } from '../components/ContributionChart';
 import { PricePeers } from '../components/PricePeers';
 import { ReviewSection } from '../components/ReviewSection';
 import { Icon } from '../components/Icon';
-import { ScoreMeter } from '../components/ScoreMeter';
-import { Notice } from '../components/States';
+import { ScoreDial } from '../components/ScoreDial';
+import { ScoreBuild } from '../components/ScoreBuild';
+import { CaseTabs } from '../components/CaseTabs';
+import { Term } from '../components/Term';
+import { pick, unpick, usePicked } from '../compare';
+import { Notice, SkeletonPanel } from '../components/States';
+import { useToast } from '../components/Toast';
 import { Timeline } from '../components/Timeline';
 import {
   formatCount,
@@ -45,7 +50,7 @@ export function responseLink(contract: { awardReference: string; title: string }
   return `mailto:${RESPONSE_EMAIL}?${new URLSearchParams({ subject, body }).toString().replaceAll('+', '%20')}`;
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
+function Fact({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="fact">
       <dt>{label}</dt>
@@ -82,19 +87,26 @@ function Detail({ contract }: { contract: ContractDetail }) {
         {contract.bidReference && ` · Bid notice ${contract.bidReference}`}
       </p>
 
-      <section className="score-block" aria-label="Risk score">
+      <section className="score-block" aria-label="Risk score" id="case-score" data-case="Score">
         <div className="score-block-figure">
+          <ScoreDial score={contract.score} threshold={threshold} />
           <span className="score-big">
             <CountUp value={toPoints(contract.score)} format={wholeNumber} />
           </span>
-          <span className="score-of">out of 100</span>
+          <span className="score-of">
+            <Term term="score">out of 100</Term>
+          </span>
         </div>
         <div className="score-block-text">
           <span className={`status ${contract.flagged ? 'is-flagged' : ''}`}>
             {contract.flagged && <Icon name="flag" size={14} />}
             {contract.flagged ? 'Flagged for review' : 'Below the flagging score'}
           </span>
-          <ScoreMeter score={contract.score} threshold={threshold} size="large" />
+          {threshold !== null && (
+            <p className="score-cutoff">
+              <Term term="cutoff">Flagged at {toPoints(threshold)}</Term> and above
+            </p>
+          )}
           <p>
             {contract.rank === 1
               ? `The most statistically unusual of the ${formatCount(contract.scoredContracts)} contracts screened.`
@@ -103,12 +115,19 @@ function Detail({ contract }: { contract: ContractDetail }) {
         </div>
       </section>
 
-      <section>
+      <section id="case-reasons" data-case="Reasons">
         <h3>Why it received this score</h3>
         <p className="section-note">
-          Every contract starts from the same level. Each indicator then moves the score up or down,
-          by the number of points shown.
+          Every contract starts from the same <Term term="startingLevel">starting level</Term>. Each
+          indicator then moves the score up or down by the <Term term="points">points</Term> shown.
         </p>
+        {run?.baseValue != null && (
+          <ScoreBuild
+            indicators={contract.indicators}
+            baseValue={run.baseValue}
+            score={contract.score}
+          />
+        )}
         <ContributionChart
           indicators={contract.indicators}
           baseValue={run?.baseValue ?? null}
@@ -120,7 +139,7 @@ function Detail({ contract }: { contract: ContractDetail }) {
 
       <ReviewSection contractId={contract.id} runId={run?.id ?? null} />
 
-      <section>
+      <section id="case-contract" data-case="Contract">
         <h3>Contract</h3>
         <dl className="facts">
           <Fact label="Procuring entity">
@@ -160,7 +179,7 @@ function Detail({ contract }: { contract: ContractDetail }) {
               {run ? `${run.modelName}, ${formatDate(run.createdAt)}` : ''}
             </span>
           </Fact>
-          <Fact label="Document requests">
+          <Fact label={<Term term="documentRequests">Document requests</Term>}>
             {contract.documentRequests === null
               ? 'Not available'
               : plural(contract.documentRequests, 'supplier')}
@@ -169,7 +188,7 @@ function Detail({ contract }: { contract: ContractDetail }) {
         </dl>
       </section>
 
-      <section>
+      <section id="case-timeline" data-case="Timeline">
         <h3>Timeline</h3>
         <Timeline
           steps={[
@@ -203,7 +222,11 @@ export function ContractPanel() {
   const run = overview.data?.run ?? null;
   const contract = useApi<ContractDetail>(run ? withRun(`/api/contracts/${id}`, run.id) : null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const picked = usePicked();
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
 
   const ids = overview.listIds ?? [];
   const position = ids.indexOf(contractId);
@@ -217,6 +240,24 @@ export function ContractPanel() {
     closeButton.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') navigate({ pathname: '/', search });
+      // Keep Tab inside the panel while it is open, as a dialog should.
+      if (event.key === 'Tab' && panelRef.current) {
+        const focusable = [
+          ...panelRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input, select, textarea, summary, [tabindex="0"]',
+          ),
+        ].filter((element) => element.offsetParent !== null);
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (!first || !last) return;
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener('keydown', onKey);
     document.body.classList.add('has-panel');
@@ -230,9 +271,10 @@ export function ContractPanel() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
+      toast('Link copied');
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // Clipboard access can be refused; the address bar still holds the link.
+      toast('Copying was blocked. Copy the address bar instead.', 'info');
     }
   };
 
@@ -247,7 +289,13 @@ export function ContractPanel() {
   return (
     <div className="panel-layer">
       <div className="scrim" onClick={close} />
-      <aside className="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+      <aside
+        className="panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="panel-title"
+        ref={panelRef}
+      >
         <div className="panel-head">
           <div className="panel-nav">
             <button
@@ -303,7 +351,13 @@ export function ContractPanel() {
           </div>
         </div>
 
-        <div className="panel-body" key={contractId}>
+        <p className="panel-disclaimer">
+          <Icon name="info" size={14} />
+          Statistically unusual is not wrongdoing. Check the source records.
+        </p>
+
+        <div className="panel-body" key={contractId} ref={bodyRef}>
+          {data && <CaseTabs body={bodyRef} />}
           {contract.error ? (
             <>
               <h2 id="panel-title" className="visually-hidden">
@@ -322,7 +376,7 @@ export function ContractPanel() {
               <h2 id="panel-title" className="visually-hidden">
                 Loading contract
               </h2>
-              <div className="skeleton skeleton-block" aria-busy="true" />
+              <SkeletonPanel />
             </>
           ) : (
             <Detail contract={data} />
@@ -331,9 +385,32 @@ export function ContractPanel() {
 
         {data && (
           <div className="panel-foot">
+            {picked.some((item) => item.id === data.id) ? (
+              <button type="button" className="button" onClick={() => unpick(data.id)}>
+                <Icon name="check" size={16} />
+                Added to compare
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  pick({ id: data.id, title: data.title });
+                  toast(
+                    picked.length
+                      ? 'Added. Open Compare at the bottom of the screen.'
+                      : 'Added to compare. Pick one more contract.',
+                    'columns',
+                  );
+                }}
+              >
+                <Icon name="columns" size={16} />
+                Compare
+              </button>
+            )}
             {respond && (
               <a
-                className="button button-outline"
+                className="button"
                 href={respond}
                 title="For the procuring entity or the supplier: send records or context that explain this pattern"
               >
@@ -341,12 +418,7 @@ export function ContractPanel() {
               </a>
             )}
             {noticeLink && (
-              <a
-                className="button button-outline"
-                href={noticeLink}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a className="button" href={noticeLink} target="_blank" rel="noreferrer">
                 Bid notice on PhilGEPS <Icon name="external" size={14} />
               </a>
             )}

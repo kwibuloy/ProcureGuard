@@ -1,9 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useApi, type DataQuality } from '../api';
 import { BarList } from '../components/BarList';
 import { Icon } from '../components/Icon';
-import { Notice, Tile } from '../components/States';
+import { Notice, SkeletonCard, Tile } from '../components/States';
 import { formatCount, formatDate, formatPercent, wholeCount } from '../format';
 import { INDICATOR_ORDER, INDICATORS } from '../indicators';
 
@@ -170,7 +170,11 @@ function HowItWorks() {
           trained to recognise wrongdoing. The score comes from an Isolation Forest, an unsupervised
           model that rates a contract by how easily it can be separated from the rest on the four
           indicators. Scores run from 0 to 100, and the highest-scoring 5 percent are flagged.
-          Earlier scoring runs are kept, and each contract page names the run it was scored in.
+          Earlier scoring runs are kept, and each contract page names the run it was scored in.{' '}
+          <Link to="/stability" className="text-link">
+            See how stable the ranking is between runs
+          </Link>
+          .
         </p>
         <p>
           The explanation beside each score comes from SHAP values, which split a contract’s score
@@ -262,7 +266,7 @@ function AboutTheData() {
       </div>
     );
   } else if (!quality.data) {
-    body = <div className="card skeleton skeleton-block" aria-busy="true" />;
+    body = <SkeletonCard lines={4} block />;
   } else if (!quality.data.contracts) {
     body = (
       <div className="card">

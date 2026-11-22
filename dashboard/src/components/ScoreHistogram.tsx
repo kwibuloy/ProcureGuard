@@ -27,6 +27,8 @@ interface Props {
 export function ScoreHistogram({ bins, threshold, selectedFrom = null, onSelect }: Props) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hovered, setHovered] = useState<number | null>(null);
+  // The one bar in the tab order; arrow keys move between bars (a roving tab stop).
+  const [focusIndex, setFocusIndex] = useState(0);
 
   const plotWidth = width - MARGIN.left - MARGIN.right;
   const plotHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
@@ -104,6 +106,29 @@ export function ScoreHistogram({ bins, threshold, selectedFrom = null, onSelect 
                 />
               )}
               <rect
+                data-bar={index}
+                role={onSelect ? 'button' : undefined}
+                tabIndex={onSelect ? (index === focusIndex ? 0 : -1) : undefined}
+                aria-pressed={onSelect ? isSelected(bin.from) : undefined}
+                aria-label={`Score ${toPoints(bin.from)} to ${toPoints(bin.to)}: ${plural(bin.count, 'contract')}`}
+                onFocus={() => setHovered(index)}
+                onBlur={() => setHovered(null)}
+                onKeyDown={(event) => {
+                  const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+                  if (step) {
+                    event.preventDefault();
+                    const next = Math.min(bins.length - 1, Math.max(0, index + step));
+                    setFocusIndex(next);
+                    (
+                      event.currentTarget.ownerSVGElement?.querySelector(
+                        `[data-bar="${next}"]`,
+                      ) as SVGElement | null
+                    )?.focus();
+                  } else if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelect?.(isSelected(bin.from) ? null : { from: bin.from, to: bin.to });
+                  }
+                }}
                 className={`chart-hit ${onSelect ? 'is-clickable' : ''}`}
                 x={x(bin.from)}
                 y={MARGIN.top}

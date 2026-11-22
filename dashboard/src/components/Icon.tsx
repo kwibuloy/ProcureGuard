@@ -11,6 +11,8 @@ const PATHS = {
   chevronUp: 'M6 14l6-6 6 6',
   chevronDown: 'M6 10l6 6 6-6',
   arrowLeft: 'M19 12H5m6-6-6 6 6 6',
+  arrowRight: 'M5 12h14m-6-6 6 6-6 6',
+  lock: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z',
   download: 'M12 4v11m0 0-4-4m4 4 4-4M5 19h14',
   print:
     'M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7v-6Z',
@@ -21,6 +23,10 @@ const PATHS = {
     'M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M15 10h3a1 1 0 0 1 1 1v10M3 21h18M9 8h2M9 12h2M9 16h2',
   empty: 'M4 7l2-3h12l2 3M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M4 7h5l1 2h4l1-2h5',
   sliders: 'M4 7h10m4 0h2M4 17h4m4 0h8M16 5v4M10 15v4',
+  bookmark: 'M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1Z',
+  keyboard: 'M3 7h18v10H3V7Zm4 3h.01M11 10h.01M15 10h.01M8 14h8',
+  progress: 'M12 3a9 9 0 1 0 9 9M12 3v4M12 3a9 9 0 0 1 9 9h-4',
+  columns: 'M4 5h16v14H4V5Zm6 0v14m4-14v14',
   map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14',
   // Indicators
   single_requester: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
@@ -40,7 +46,7 @@ export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

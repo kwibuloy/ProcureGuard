@@ -2,6 +2,7 @@ import { useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import type { ListQuery, Overview } from '../../api';
 import { Icon } from '../../components/Icon';
+import { SearchBox } from '../../components/SearchBox';
 import { INDICATOR_ORDER, INDICATORS } from '../../indicators';
 import { PERIODS, SORT_LABELS, sheetFilterCount, type Chip } from './query';
 
@@ -16,7 +17,10 @@ export function FilterBar({
   chips,
   update,
   clearAll,
+  runId,
 }: {
+  /** The scoring run shown, for search suggestions. */
+  runId: number | null;
   query: ListQuery;
   filters: Overview['filters'];
   phone: boolean;
@@ -35,19 +39,22 @@ export function FilterBar({
   return (
     <>
       <div className="filters">
-        <label className="field field-search">
-          <span className="visually-hidden">Search contracts</span>
-          <Icon name="search" />
-          <input
-            ref={searchBox}
-            type="search"
-            placeholder={phone ? 'Search contracts' : 'Search project, place or name'}
-            title="Search by project title, city or province, procuring entity, awardee, or reference number"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-          />
-          <kbd aria-hidden="true">/</kbd>
-        </label>
+        <SearchBox
+          text={text}
+          setText={setText}
+          searchBox={searchBox}
+          phone={phone}
+          runId={runId}
+          onPlace={(place) => {
+            setText('');
+            update({
+              q: '',
+              region: '',
+              province: place.kind === 'province' ? place.name : '',
+              city: place.kind === 'city' ? place.name : '',
+            });
+          }}
+        />
         <button
           type="button"
           className="button button-outline filters-toggle phone-only"
@@ -77,7 +84,11 @@ export function FilterBar({
             >
               <div className="sheet-head phone-only">
                 <h3>Filters</h3>
-                <button type="button" className="button" onClick={() => setFiltersOpen(false)}>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => setFiltersOpen(false)}
+                >
                   Done
                 </button>
               </div>
@@ -185,7 +196,7 @@ export function FilterBar({
           ))}
           <li>
             <button type="button" className="button button-quiet" onClick={clearAll}>
-              Clear all
+              Clear filters
             </button>
           </li>
         </ul>

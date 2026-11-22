@@ -16,6 +16,8 @@ import {
   pricePeers,
   profile,
   SORTS,
+  suggest,
+  compareRuns,
   type Db,
   type Indicator,
   type Sort,
@@ -309,6 +311,33 @@ export function createApp(db: Db, options: AppOptions = {}) {
     const { run, notModified } = await servedRun(req, res);
     if (notModified) return;
     res.json(run ? await places(db, run.id) : []);
+  });
+
+  // Suggestions while typing in the search box: contracts, names and places.
+  app.get('/api/suggest', searchLimiter, async (req, res) => {
+    const q = text(req.query.q)?.slice(0, 80);
+    const { run, notModified } = await servedRun(req, res);
+    if (notModified) return;
+    if (!run || !q || q.length < 2) {
+      return res.json({ contracts: [], entities: [], awardees: [], places: [] });
+    }
+    res.json(await suggest(db, run.id, q));
+  });
+
+  // How a later run ranks the contracts an earlier run scored (ranking stability).
+  app.get('/api/run-compare', async (req, res) => {
+    const from = positiveInt(req.query.from, 0);
+    const to = positiveInt(req.query.to, 0);
+    if (!from || !to || from === to) {
+      return res.status(400).json({ error: 'Choose two different scoring runs' });
+    }
+    const [before, after] = await Promise.all([findRun(db, from), findRun(db, to)]);
+    if (before?.id !== from || after?.id !== to) {
+      return res.status(404).json({ error: 'Scoring run not found' });
+    }
+    res.set('Cache-Control', CACHE_LATEST);
+    const limit = Math.min(positiveInt(req.query.limit, 30), 100);
+    res.json(await compareRuns(db, from, to, limit));
   });
 
   app.get('/api/data-quality', async (_req, res) => {

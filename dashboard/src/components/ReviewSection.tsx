@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDate } from '../format';
+import { useSpamGuard } from '../spam';
+import { Trap } from './Trap';
+import { useToast } from './Toast';
 import {
   postJson,
   REVIEW_HELP,
@@ -14,6 +17,9 @@ import {
 const STATUSES = Object.keys(REVIEW_LABELS) as ReviewStatus[];
 const NOTE_LIMIT = 2000;
 
+/** Reviews saved in this visit, for a short running count after each save. */
+let savedThisVisit = 0;
+
 /** Review status, its history and verified replies; a form for signed-in reviewers. */
 export function ReviewSection({ contractId, runId }: { contractId: number; runId: number | null }) {
   const { reviews, responses, loaded, failed } = useContractReviews(contractId);
@@ -21,7 +27,7 @@ export function ReviewSection({ contractId, runId }: { contractId: number; runId
   const latest = reviews[0];
 
   return (
-    <section className="review-section">
+    <section className="review-section" id="case-review" data-case="Review">
       <h3>Review</h3>
       <p className={`review-status is-${latest?.status ?? 'not_reviewed'}`}>
         {REVIEW_LABELS[latest?.status ?? 'not_reviewed']}
@@ -96,38 +102,51 @@ function ReviewForm({
   const [message, setMessage] = useState<string | null>(null);
   const [reply, setReply] = useState({ organization: '', summary: '', receivedOn: '' });
   const [showReply, setShowReply] = useState(false);
+  const guard = useSpamGuard();
+  const toast = useToast();
 
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
+  /** Runs one write, unless the spam checks hold it back. */
+  const send = async (write: () => Promise<void>, done: string | (() => string)) => {
+    if (saving) return;
+    const held = guard.check();
+    if (held) {
+      setMessage(held);
+      return;
+    }
     setSaving(true);
     setMessage(null);
     try {
-      await postJson('/api/reviews', { contractId, status, note, runId });
-      setNote('');
-      setMessage('Saved.');
+      await write();
+      toast(typeof done === 'function' ? done() : done);
       reviewsChanged();
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
+      guard.attempted();
       setSaving(false);
     }
   };
 
-  const saveReply = async (event: FormEvent) => {
+  const save = (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
-    setMessage(null);
-    try {
+    void send(
+      async () => {
+        await postJson('/api/reviews', { contractId, status, note, runId });
+        setNote('');
+        savedThisVisit += 1;
+      },
+      () =>
+        savedThisVisit > 1 ? `Review saved. ${savedThisVisit} saved this visit.` : 'Review saved',
+    );
+  };
+
+  const saveReply = (event: FormEvent) => {
+    event.preventDefault();
+    void send(async () => {
       await postJson('/api/responses', { contractId, ...reply });
       setReply({ organization: '', summary: '', receivedOn: '' });
       setShowReply(false);
-      setMessage('Reply added.');
-      reviewsChanged();
-    } catch (error) {
-      setMessage((error as Error).message);
-    } finally {
-      setSaving(false);
-    }
+    }, 'Reply added');
   };
 
   return (
@@ -162,8 +181,10 @@ function ReviewForm({
           />
         </label>
         <div className="review-actions">
-          <button type="submit" className="button" disabled={saving}>
-            {saving ? 'Saving…' : 'Save review'}
+          <Trap value={guard.trap} onChange={guard.setTrap} />
+          <button type="submit" className="button button-primary" disabled={saving}>
+            {saving && <span className="spinner" aria-hidden="true" />}
+            {saving ? 'Saving' : 'Save review'}
           </button>
           <button
             type="button"
@@ -173,7 +194,7 @@ function ReviewForm({
             {showReply ? 'Cancel reply' : 'Add a verified reply'}
           </button>
           {message && (
-            <span className="review-message" role="status">
+            <span className="review-message" role="alert">
               {message}
             </span>
           )}
@@ -214,7 +235,8 @@ function ReviewForm({
               onChange={(event) => setReply({ ...reply, summary: event.target.value })}
             />
           </label>
-          <button type="submit" className="button" disabled={saving}>
+          <button type="submit" className="button button-primary" disabled={saving}>
+            {saving && <span className="spinner" aria-hidden="true" />}
             Add reply
           </button>
         </form>

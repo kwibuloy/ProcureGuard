@@ -10,6 +10,7 @@ import { ContractTable } from '../../components/ContractTable';
 import { Notice, SkeletonRows } from '../../components/States';
 import { formatCount, plural } from '../../format';
 import { Pagination } from './Navigation';
+import { CLEARED_FILTERS } from './query';
 
 /** The list itself: loading and empty states, the table, and paging. */
 export function ListBody({
@@ -39,9 +40,11 @@ export function ListBody({
     return (
       <Notice
         title="The contract list could not be loaded"
-        icon="info"
+        art="unplugged"
         action={{ label: 'Try again', onClick: list.reload }}
-      />
+      >
+        Check your connection, then try again.
+      </Notice>
     );
   }
   if (!rows) return <SkeletonRows />;
@@ -51,20 +54,33 @@ export function ListBody({
       return (
         <Notice
           title="No flagged contract matches"
-          action={{ label: 'Show them', onClick: () => update({ show: 'all' }) }}
+          art="search"
+          action={{ label: 'Show those contracts', onClick: () => update({ show: 'all' }) }}
+          secondary={hasChips ? { label: 'Clear filters', onClick: clearAll } : undefined}
         >
           {`${plural(matches, 'screened contract')} ${matches === 1 ? 'matches' : 'match'} these filters but ${matches === 1 ? 'is' : 'are'} not flagged.`}
         </Notice>
       );
     }
+    // Suggest the step most likely to find something: keep only the search words,
+    // or widen to every contract.
+    const keepSearch =
+      query.q && hasChips
+        ? {
+            label: `Search all contracts for “${query.q}”`,
+            onClick: () => update({ ...CLEARED_FILTERS, q: query.q, show: 'all' }),
+          }
+        : undefined;
     return (
       <Notice
         title="No contracts match"
+        art="search"
         action={hasChips ? { label: 'Clear filters', onClick: clearAll } : undefined}
+        secondary={keepSearch}
       >
         {query.flaggedOnly
-          ? 'No flagged contract matches these filters, and no screened contract does either.'
-          : 'Nothing in this scoring run matches these filters.'}
+          ? 'No flagged contract matches these filters, and no screened contract does either. Try fewer filters or a shorter search.'
+          : 'Nothing in this scoring run matches these filters. Try fewer filters or a shorter search.'}
       </Notice>
     );
   }
@@ -84,12 +100,7 @@ export function ListBody({
       </div>
       {phone && rows.length < data.total && phoneSize < MAX_PAGE_SIZE ? (
         <div className="show-more">
-          <button
-            type="button"
-            className="button button-outline"
-            disabled={list.loading}
-            onClick={onMore}
-          >
+          <button type="button" className="button" disabled={list.loading} onClick={onMore}>
             Show {Math.min(PHONE_PAGE_SIZE, data.total - rows.length)} more
           </button>
           <p className="card-note">
