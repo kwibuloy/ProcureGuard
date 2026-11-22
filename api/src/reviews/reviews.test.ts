@@ -2,7 +2,8 @@ import request from 'supertest';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
 import type { Db } from '../queries.js';
-import { hashPassword, verifyPassword } from './passwords.js';
+import { randomBytes, scryptSync } from 'node:crypto';
+import { hashPassword, needsRehash, verifyPassword } from './passwords.js';
 import { SESSION_COOKIE, WRITE_HEADER } from './routes.js';
 
 let HASH = '';
@@ -56,6 +57,48 @@ describe('reviewer passwords', () => {
     expect(await verifyPassword('correct horse battery', HASH)).toBe(true);
     expect(await verifyPassword('correct horse batterY', HASH)).toBe(false);
     expect(HASH).not.toContain('correct');
+  });
+
+  it('use the OWASP scrypt minimum and spot hashes made with older settings', () => {
+    expect(HASH.startsWith('scrypt$131072$8$1$')).toBe(true);
+    expect(needsRehash(HASH)).toBe(false);
+    expect(needsRehash(HASH.replace('$131072$', '$16384$'))).toBe(true);
+  });
+
+  it('still verify a hash made with the older, cheaper settings', async () => {
+    const old = await oldHash('correct horse battery');
+    expect(await verifyPassword('correct horse battery', old)).toBe(true);
+  });
+});
+
+/** A hash in the stored format but with the settings used before (N = 2^14). */
+async function oldHash(password: string): Promise<string> {
+  const salt = randomBytes(16);
+  const key = scryptSync(password, salt, 64, { N: 16_384, r: 8, p: 1 });
+  return ['scrypt', 16_384, 8, 1, salt.toString('base64url'), key.toString('base64url')].join('$');
+}
+
+describe('signing in with an older hash', () => {
+  it('replaces it with one made with the current settings', async () => {
+    const { db, query } = fakeDb({ hash: await oldHash('correct horse battery') });
+
+    const response = await signIn(createApp(db));
+
+    expect(response.status).toBe(200);
+    const update = query.mock.calls.find(([sql]) => String(sql).includes('SET password_hash'));
+    expect(update).toBeDefined();
+    const [, params] = update as [string, [number, string]];
+    expect(params[0]).toBe(3);
+    expect(params[1].startsWith('scrypt$131072$8$1$')).toBe(true);
+    expect(await verifyPassword('correct horse battery', params[1])).toBe(true);
+  });
+
+  it('leaves a current hash alone', async () => {
+    const { db, query } = fakeDb();
+
+    await signIn(createApp(db));
+
+    expect(query.mock.calls.some(([sql]) => String(sql).includes('SET password_hash'))).toBe(false);
   });
 });
 
