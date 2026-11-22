@@ -34,22 +34,35 @@ export function CaseTabs({ body }: { body: RefObject<HTMLElement | null> }) {
     return () => watcher.disconnect();
   }, [body]);
 
-  // Mark the section nearest the top of the panel.
+  // Mark the section being read: the last one whose top has passed under the tabs,
+  // or the last section once the panel is scrolled to the bottom.
   useEffect(() => {
     const root = body.current;
-    if (!root || !tabs.length || typeof IntersectionObserver === 'undefined') return;
-    const watcher = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((entry) => entry.isIntersecting);
-        if (visible.length) setActive(visible[0]!.target.id);
-      },
-      { root, rootMargin: '-64px 0px -60% 0px' },
-    );
-    tabs.forEach((tab) => {
-      const section = document.getElementById(tab.id);
-      if (section) watcher.observe(section);
-    });
-    return () => watcher.disconnect();
+    if (!root || !tabs.length) return;
+    let frame = 0;
+    const mark = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const atBottom = root.scrollTop + root.clientHeight >= root.scrollHeight - 4;
+        if (atBottom && root.scrollTop > 0) {
+          setActive(tabs.at(-1)!.id);
+          return;
+        }
+        const line = root.getBoundingClientRect().top + 120;
+        let current = tabs[0]!.id;
+        for (const tab of tabs) {
+          const section = document.getElementById(tab.id);
+          if (section && section.getBoundingClientRect().top <= line) current = tab.id;
+        }
+        setActive(current);
+      });
+    };
+    mark();
+    root.addEventListener('scroll', mark, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener('scroll', mark);
+    };
   }, [body, tabs]);
 
   if (tabs.length < 2) return null;
@@ -63,7 +76,22 @@ export function CaseTabs({ body }: { body: RefObject<HTMLElement | null> }) {
           aria-current={active === tab.id ? 'true' : undefined}
           onClick={(event) => {
             event.preventDefault();
-            document.getElementById(tab.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Scroll only the panel body. scrollIntoView would also scroll the panel
+            // frame and the page, pushing the header and these tabs out of reach.
+            const root = body.current;
+            const section = document.getElementById(tab.id);
+            if (root && section && tab.id === tabs[0]!.id) {
+              root.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (root && section) {
+              const tabsHeight = event.currentTarget.parentElement?.offsetHeight ?? 0;
+              const top =
+                section.getBoundingClientRect().top -
+                root.getBoundingClientRect().top +
+                root.scrollTop -
+                tabsHeight -
+                12;
+              root.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+            }
             setActive(tab.id);
           }}
         >

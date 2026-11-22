@@ -10,7 +10,6 @@ import {
 } from '../api';
 import { listCount } from '../amounts';
 import { Icon } from '../components/Icon';
-import { PlaceMap } from '../components/PlaceMap';
 import { Notice, SkeletonQueuePage } from '../components/States';
 import { useToast } from '../components/Toast';
 import { ReviewProgress } from '../components/ReviewProgress';
@@ -31,28 +30,22 @@ import {
 } from '../view';
 import { FilterBar } from './queue/FilterBar';
 import { ListBody } from './queue/ListBody';
-import { BackToTop } from './queue/Navigation';
-import { QueueCharts } from './queue/QueueCharts';
+import { BackToTop, ROW_CHOICES } from './queue/Navigation';
 import { CLEARED_FILTERS, exportShortfall, filterChips, readQuery } from './queue/query';
 import { Summary, SummaryStrip, type Target } from './queue/Summary';
 import { useListKeys } from './queue/useListKeys';
-
-type PhoneTab = 'list' | 'map' | 'charts';
-const PHONE_TABS: { key: PhoneTab; label: string }[] = [
-  { key: 'list', label: 'List' },
-  { key: 'map', label: 'Map' },
-  { key: 'charts', label: 'Charts' },
-];
 
 export function QueuePage() {
   const overview = useOverview();
   const run = overview.data?.run ?? null;
   const [params, setParams] = useSearchParams();
   const phone = useMedia(PHONE);
-  const tabParam = params.get('tab');
-  const tab: PhoneTab = tabParam === 'map' || tabParam === 'charts' ? tabParam : 'list';
   const query = readQuery(params);
   const view = readView(params);
+  const rowsParam = Number(params.get('rows'));
+  const rowsPerPage = (ROW_CHOICES as readonly number[]).includes(rowsParam)
+    ? rowsParam
+    : ROW_CHOICES[0];
   // Phones show 10 rows and add 10 more on request, starting over when the filters change.
   const listKey = contractsPath({ ...query, page: 1 }, run?.id ?? null);
   const [more, setMore] = useState({ key: '', size: PHONE_PAGE_SIZE });
@@ -65,13 +58,12 @@ export function QueuePage() {
           run.id,
           phoneSize,
         )
-      : contractsPath(query, run.id);
+      : contractsPath(query, run.id, rowsPerPage);
   const list = useApi<ContractList>(listPath);
   const openId = Number(useMatch('/contracts/:id')?.params.id) || null;
   const search = params.toString();
   const statuses = useReviewStatuses(list.data?.items.map((row) => row.id) ?? []);
   const searchBox = useRef<HTMLInputElement>(null);
-  const queueRef = useRef<HTMLElement>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const toast = useToast();
 
@@ -109,12 +101,6 @@ export function QueuePage() {
 
   const ids = list.data?.items.map((row) => row.id) ?? [];
 
-  /** A chart or the map filtered the list: bring the list into view and say what changed. */
-  const filterFrom = (changes: Record<string, string>, message: string) => {
-    update(phone ? { ...changes, tab: '' } : changes);
-    toast(message, 'flag');
-    if (!phone) queueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
   useListKeys({ idKey: ids.join(','), cursor, setCursor, openId, search, searchBox });
 
   if (overview.error) {
@@ -166,27 +152,7 @@ export function QueuePage() {
       </div>
       <SummaryStrip overview={overview.data} first={first} />
 
-      <div className="phone-tabs phone-only" role="tablist" aria-label="Show">
-        {PHONE_TABS.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.key}
-            onClick={() =>
-              update({ tab: item.key === 'list' ? '' : item.key, page: params.get('page') ?? '' })
-            }
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <section
-        ref={queueRef}
-        className={`card queue phone-section ${tab === 'list' ? 'is-active' : ''}`}
-        aria-labelledby="queue-title"
-      >
+      <section className="card queue" aria-labelledby="queue-title">
         <div className="queue-head">
           <div>
             <h2 id="queue-title" className="queue-title">
@@ -291,46 +257,6 @@ export function QueuePage() {
           update={update}
           clearAll={clearAll}
         />
-      </section>
-
-      <section className="explore" aria-labelledby="explore-title">
-        <div className="section-head wide-only-block">
-          <div>
-            <h2 id="explore-title">Explore the patterns</h2>
-            <p>
-              Where the flagged contracts sit and why they were flagged. Select a bar or a place to
-              filter the list above.
-            </p>
-          </div>
-        </div>
-
-        <QueueCharts
-          overview={overview.data}
-          run={run}
-          query={query}
-          active={tab === 'charts'}
-          onFilter={filterFrom}
-        />
-
-        <div className={`phone-section ${tab === 'map' ? 'is-active' : ''}`}>
-          <PlaceMap
-            run={run.id}
-            onFilter={(place) => {
-              const name = place.city || place.province.split('|')[0] || place.region;
-              filterFrom(
-                { region: place.region, province: place.province, city: place.city },
-                name ? `Showing contracts in ${name}` : 'Showing contracts in every place',
-              );
-            }}
-          />
-          <button
-            type="button"
-            className="button button-primary phone-only map-to-list"
-            onClick={() => update({ tab: '' })}
-          >
-            {count ? `Show ${count} in the list` : 'Show the list'}
-          </button>
-        </div>
       </section>
 
       <BackToTop />

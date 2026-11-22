@@ -111,7 +111,9 @@ export function ContractTable({
                         {row.rank}
                       </span>
                     ) : (
-                      row.rank
+                      <span className={`rank-chip ${row.rank <= 3 ? 'is-top' : ''}`}>
+                        {row.rank}
+                      </span>
                     )}
                   </td>
                 )}

@@ -952,7 +952,7 @@ input[type='radio'] {
 
 .bar-list-row {
   display: grid;
-  grid-template-columns: minmax(200px, 1.3fr) minmax(60px, 1fr) 64px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(48px, 1fr) minmax(48px, auto);
   align-items: center;
   gap: var(--s-1) var(--s-4);
   width: 100%;

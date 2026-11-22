@@ -9,7 +9,7 @@ import {
 import { ContractTable } from '../../components/ContractTable';
 import { Notice, SkeletonRows } from '../../components/States';
 import { formatCount, plural } from '../../format';
-import { Pagination } from './Navigation';
+import { Pagination, ROW_CHOICES } from './Navigation';
 import { CLEARED_FILTERS } from './query';
 
 /** The list itself: loading and empty states, the table, and paging. */
@@ -108,8 +108,12 @@ export function ListBody({
           </p>
         </div>
       ) : (
-        data.total > data.pageSize && (
-          <Pagination list={data} onPage={(page) => update({ page: String(page) })} />
+        data.total > ROW_CHOICES[0] && (
+          <Pagination
+            list={data}
+            onPage={(page) => update({ page: String(page) })}
+            onSize={(size) => update({ rows: size === ROW_CHOICES[0] ? '' : String(size) })}
+          />
         )
       )}
     </>

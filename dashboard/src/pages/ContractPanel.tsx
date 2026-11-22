@@ -132,6 +132,7 @@ function Detail({ contract }: { contract: ContractDetail }) {
           indicators={contract.indicators}
           baseValue={run?.baseValue ?? null}
           score={contract.score}
+          fold={2}
         />
       </section>
 

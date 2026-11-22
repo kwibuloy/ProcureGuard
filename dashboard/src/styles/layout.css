@@ -353,6 +353,8 @@
   flex-direction: column;
   width: min(680px, calc(100vw - 24px));
   overflow: hidden;
+  /* clip, not just hidden: a hidden box can still be scrolled by script or focus. */
+  overflow: clip;
   border: var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
@@ -553,10 +555,30 @@
 
   .footer-inner {
     grid-template-columns: 1fr;
+    gap: var(--s-4);
+    padding-top: var(--s-6);
+    padding-bottom: var(--s-4);
   }
 
+  /* Phones: links wrap side by side instead of one long column. */
   .footer-links {
-    justify-content: start;
+    grid-template-columns: 1fr;
+    gap: var(--s-4);
+    justify-content: stretch;
+  }
+
+  .footer-links ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-4);
+  }
+
+  .footer-brand p {
+    font-size: var(--t-xs);
+  }
+
+  .footer-base {
+    padding-top: var(--s-3);
   }
 
   /* The panel fills the screen and rises from below. */

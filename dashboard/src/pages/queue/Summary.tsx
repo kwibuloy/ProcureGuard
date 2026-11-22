@@ -48,13 +48,49 @@ function Freshness({ run }: { run: Overview['run'] }) {
   );
 }
 
+/**
+ * A band of the run's headline facts, scrolling slowly like a news ticker. The same
+ * facts are in the hero below, so the band is decoration for screen readers.
+ */
+function Ticker({ overview }: { overview: Overview }) {
+  const { totals, run } = overview;
+  const facts = [
+    `${formatCount(totals.flagged)} contracts flagged for review`,
+    `${formatPesoCompact(totals.flaggedValue)} in flagged contracts`,
+    run?.flagThreshold == null ? null : `Flagged at ${toPoints(run.flagThreshold)} out of 100`,
+    `${formatCount(totals.contracts)} contracts screened`,
+    'Four indicators, one score',
+    'Unusual is not wrongdoing',
+    'PhilGEPS 2024 civil works',
+  ].filter(Boolean);
+  // Two copies, so the loop has no gap.
+  return (
+    <div className="ticker" aria-hidden="true">
+      <div className="ticker-track">
+        {[0, 1].map((copy) =>
+          facts.map((fact) => (
+            <span key={`${copy}-${fact}`} className="ticker-item">
+              {fact}
+            </span>
+          )),
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** The headline of the Contracts page: how many contracts are flagged, and where to start. */
 export function Summary({ overview, first }: { overview: Overview; first: Target }) {
   const { totals, run } = overview;
   const share = totals.contracts ? totals.flagged / totals.contracts : 0;
   return (
     <section className="hero" aria-label="Summary of the scoring run">
+      <Ticker overview={overview} />
       <div className="card hero-main">
+        <span className="hero-sticker" aria-hidden="true">
+          2024
+          <small>civil works</small>
+        </span>
         <div>
           <Freshness run={run} />
           <h2 className="hero-title">
