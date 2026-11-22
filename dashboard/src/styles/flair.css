@@ -429,3 +429,65 @@ body {
 .hero-main {
   position: relative;
 }
+
+/* ---------- Hero: fits the first screen on load ----------
+   Type and spacing scale with the screen's height as well as its width, so
+   the whole hero (ticker, count, action and figures) is in view before any
+   scrolling, at full size on tall screens and tighter on short ones. */
+@media (min-width: 861px) {
+  .page:has(> .wide-only-block .hero) {
+    padding-top: clamp(16px, 3vh, 40px);
+  }
+
+  .hero {
+    gap: clamp(12px, 2.4vh, 24px) var(--s-6);
+  }
+
+  .hero-main {
+    gap: clamp(12px, 3vh, 32px);
+    padding: clamp(20px, 4vh, 40px);
+  }
+
+  .hero-figure {
+    margin-bottom: clamp(4px, 1.2vh, 12px);
+    font-size: clamp(56px, min(9vw, 13vh), 120px);
+  }
+
+  .hero-title {
+    font-size: clamp(30px, min(5vw, 6.6vh), 60px);
+  }
+
+  .hero-note {
+    margin-top: clamp(8px, 1.6vh, 16px);
+  }
+
+  .hero-stats {
+    gap: clamp(8px, 1.6vh, 16px);
+  }
+
+  .hero-stats .tile {
+    padding-top: clamp(12px, 2vh, 20px);
+    padding-bottom: clamp(12px, 2vh, 20px);
+  }
+}
+
+/* 861 to 1180px: the figures sit under the hero, so the hero itself is tighter. */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .hero-figure {
+    font-size: clamp(52px, min(8vw, 10.5vh), 104px);
+  }
+
+  .hero-title {
+    font-size: clamp(28px, min(4.4vw, 5.4vh), 52px);
+  }
+
+  .hero-main {
+    gap: clamp(10px, 2.2vh, 24px);
+    padding: clamp(18px, 3.2vh, 32px);
+  }
+
+  .hero-stats .tile {
+    padding-top: clamp(8px, 1.4vh, 16px);
+    padding-bottom: clamp(8px, 1.4vh, 16px);
+  }
+}
