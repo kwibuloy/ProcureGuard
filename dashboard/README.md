@@ -20,7 +20,8 @@ With no real data yet, load and score demonstration contracts from the repo root
 
 | Route                                             | Screen                                                                                                                                                                                                                                                |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                               | Contracts: summary, score histogram, main reasons, map by place, filterable ranked table (award period, new flags only), review marks, "New" badges, CSV export                                                                                       |
+| `/`                                               | Contracts: summary, then the filterable ranked table (award period, new flags only), review marks, "New" badges, CSV export                                                                                                             |
+| `/patterns`                                       | Score histogram, main reasons and the map by place. Selecting a bar or a place opens the Contracts list with that filter                                                                                                                              |
 | `/contracts/:id`                                  | Side panel over the queue explaining one contract's score: indicators, price compared with similar contracts, review status and history, the scoring run, links to PhilGEPS and to respond by email; prints as a one-page summary with the disclaimer |
 | `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won, with contracts by award month; entities link to a search for their COA audit reports                                                                                                     |
 | `/about`                                          | Common questions, how ProcureGuard works (what a flag means, the four indicators, the score, limits), and the data quality figures. `/data` and `/method` redirect to its sections                                                                    |
@@ -32,9 +33,11 @@ With no real data yet, load and score demonstration contracts from the repo root
 
 Filters, sort order and page live in the URL, so a filtered view can be shared as a link. View settings (grouping lots by notice, hidden columns, compact rows) also live in the URL and are saved in the browser; a link that carries settings wins over the saved ones. The scoring run on screen is chosen in the header and lasts for the browser session.
 
+The pager offers 15, 30, 50 or 100 rows a page (`rows`); 15 is the default. The table never scrolls sideways: columns share the width, the small score bar is dropped below 1400px and the awardee column below 1180px.
+
 ## Working the queue
 
-- Select a histogram bar or a main-reason bar to filter the list; active filters appear as removable chips.
+- On **Patterns**, select a histogram bar, a main-reason bar or a place to open the list with that filter; active filters appear as removable chips.
 - `J` and `K` (or the arrow keys) move through the list, `Enter` opens a contract, `Esc` closes it, `/` jumps to search. With a contract open, `J` and `K` go to the next and previous one.
 - Typing two or more letters in search suggests contracts, procuring entities, awardees and places.
 - **Saved views** keep a named set of filters in this browser. **Compare** in a contract's panel adds it to a tray; two make a side-by-side page.
@@ -45,13 +48,13 @@ Filters, sort order and page live in the URL, so a filtered view can be shared a
 
 Below 860px wide the Contracts page is rebuilt for scrolling less (desktop is unchanged):
 
-- A one-line summary strip, then **List · Map · Charts** tabs (`tab` in the URL). The map loads only when its tab is opened.
-- Contracts are cards (about 140px), not a table, so nothing scrolls sideways. Cards leave out the rank (the order shows it) and the awardee; the contract panel shows both.
+- A one-line summary strip, then the list. Charts and the map are on the Patterns page.
+- Contracts are cards (about 120px: title, entity and amount, main reason), not a table, so nothing scrolls sideways. Cards leave out the rank (the order shows it) and the awardee; the contract panel shows both.
 - Search and a **Filters** button stay pinned while the list scrolls; the other filters open as a sheet from the bottom.
 - 10 contracts at a time with **Show more** (up to 100, then pages), and a back-to-top button.
-- The page tabs (Contracts, About) move to a bar at the bottom of the screen; the top bar is one 56px row.
+- The page tabs (Contracts, Patterns, About) move to a bar at the bottom of the screen; the top bar is one 56px row.
 
-Unknown addresses, including the removed `/compare` page, redirect to `/`.
+Unknown addresses redirect to `/`.
 
 ## Map
 
@@ -64,13 +67,14 @@ The map card shows flagged contracts by where the procuring entity is based (Phi
 
 ## Design rules
 
-The design system lives in `src/styles/`: `tokens.css` (every colour, border, shadow, radius, space, type size and timing, for light and dark), then `base.css`, `components.css`, `layout.css` and `pages.css`. Components use tokens only.
+The design system lives in `src/styles/`: `tokens.css` (every colour, border, shadow, radius, space, type size and timing, for light and dark), then `base.css`, `components.css`, `layout.css`, `pages.css`, `features.css` and `flair.css`. Components use tokens only.
 
-- **Neubrutalist.** Warm paper, 2px ink outlines, hard offset shadows, no blur and no gradients. Display type is Space Grotesk; text is Inter; mono only for keys and code. Nothing lighter than regular weight, nothing italic.
+- **Neubrutalist.** Warm paper, 2px ink outlines, hard offset shadows, no blur and no colour fades (the dot grid, stripes and marker swipes are hard-edged patterns). Display type is Space Grotesk; text is Inter; mono only for keys and code. Nothing lighter than regular weight, nothing italic.
 - **One accent, used for action.** Cyan marks the action to take (one primary button per view), the selected item and keyboard focus. It never appears in score explanations.
 - **No alarm colours.** Scores and flags are drawn in ink. A flag is a prompt to review, so nothing is styled as a warning or an error.
 - **Red and blue mean one thing.** An indicator raised or lowered a score. They appear only in score explanations, always with a legend or label.
 - **Every score shows its reasons.** A score never appears in the detail view without the four indicators, their points and a sentence stating the figures behind each.
+- **Flair is decoration only.** `flair.css` holds the louder layer: the dot-grid paper, the ticker band, the hero sticker, rank chips, marker swipes under section titles, tilted cards. Sunflower (`--pop`) appears only there and never carries meaning. The ticker pauses on hover and stops under `prefers-reduced-motion`.
 - **Wording.** "Flagged for review" and "statistically unusual" only. Document requests are never called bids or bidders. Indicator names and sentences live in `src/indicators.ts`.
 - **Motion gives feedback.** The contract panel swings in from the edge, menus drop in 3D, bars grow from their baseline, figures count up, and a toast confirms actions that change something out of view (filtering from a chart or the map, copying a link, saving a review). Loading shows skeletons shaped like the content. All motion is cut to an instant under `prefers-reduced-motion`.
 - **Component rules.** One primary button per view. The cyan highlight appears once per headline. A number always says what it counts and what it is out of. Any term a newcomer might not know gets a tip (`src/glossary.ts`). Confirm any action whose result is out of view with a toast. Every empty state says what happened and offers the most likely next step. `/styleguide` shows each of these.

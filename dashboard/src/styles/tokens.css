@@ -9,7 +9,10 @@
    - raises / lowers (red / blue): an indicator moved a score up or down.
      They appear only in score explanations, never as decoration.
    - ink shades: data marks (flagged bars, map shading, score meters).
-   Nothing is styled as an alarm: a flag is a prompt to review. */
+   Nothing is styled as an alarm: a flag is a prompt to review.
+
+   --pop (sunflower) is decoration only: stickers, the ticker, chips. It never
+   marks a contract or carries meaning, so nothing depends on seeing it. */
 
 :root {
   color-scheme: light;
@@ -52,6 +55,11 @@
   --note-ink: #3f3104;
 
   --scrim: rgba(12, 10, 9, 0.48);
+
+  /* Decoration only (see above) */
+  --pop: #ffd84d;
+  --on-pop: #0c0a09;
+  --dot: #e2dfdc; /* the paper's dot grid */
 
   /* Borders */
   --bw: 2px;
@@ -150,6 +158,8 @@
     --note-bg: #2d2610;
     --note-ink: #f3e5b5;
     --scrim: rgba(0, 0, 0, 0.66);
+    --pop: #f2c94c;
+    --dot: #2a2622;
     --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23fafaf9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
@@ -181,5 +191,7 @@
   --note-bg: #2d2610;
   --note-ink: #f3e5b5;
   --scrim: rgba(0, 0, 0, 0.66);
+  --pop: #f2c94c;
+  --dot: #2a2622;
   --caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23fafaf9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }

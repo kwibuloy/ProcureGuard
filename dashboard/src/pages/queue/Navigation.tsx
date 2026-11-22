@@ -31,12 +31,18 @@ export function BackToTop() {
   );
 }
 
+/** Rows a page can show; the first is the default. */
+export const ROW_CHOICES = [15, 30, 50, 100] as const;
+
 export function Pagination({
   list,
   onPage,
+  onSize,
 }: {
   list: ContractList;
   onPage: (page: number) => void;
+  /** When given, the reader can choose how many rows a page shows. */
+  onSize?: (size: number) => void;
 }) {
   const pages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const first = list.total === 0 ? 0 : (list.page - 1) * list.pageSize + 1;
@@ -46,6 +52,18 @@ export function Pagination({
       <p>
         {first} to {last} of {formatCount(list.total)}
       </p>
+      {onSize && (
+        <label className="field rows-picker">
+          <span>Rows per page</span>
+          <select value={list.pageSize} onChange={(event) => onSize(Number(event.target.value))}>
+            {ROW_CHOICES.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="pagination-buttons">
         <button
           type="button"

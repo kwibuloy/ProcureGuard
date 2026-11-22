@@ -324,7 +324,8 @@
 }
 
 .col-contract {
-  min-width: 260px;
+  width: 26%;
+  min-width: 0;
   max-width: 440px;
 }
 
@@ -380,7 +381,7 @@
 }
 
 .col-awardee {
-  min-width: 170px;
+  width: 12%;
 }
 
 .col-amount,
@@ -444,8 +445,9 @@
 }
 
 .col-reason {
-  min-width: 300px;
-  max-width: 400px;
+  width: 28%;
+  min-width: 0;
+  max-width: 420px;
 }
 
 .why {
@@ -1745,9 +1747,44 @@
    Narrower screens
    ====================================================================== */
 
+/* Below 1400px the score number stays and its small bar goes, leaving the
+   room to the reason. */
+@media (max-width: 1400px) {
+  .queue-table .col-score .meter {
+    display: none;
+  }
+}
+
 @media (max-width: 1180px) {
   .col-awardee {
     display: none;
+  }
+
+  /* Narrower screens: let the columns share the width instead of holding
+     fixed minimums, so the table never scrolls sideways. */
+  /* The reason is the longest text, so it gets the most room. */
+  .queue-table .col-reason {
+    width: 34%;
+  }
+
+  .queue-table .col-entity {
+    width: 15%;
+  }
+
+  .queue-table th,
+  .queue-table td {
+    padding-left: var(--s-3);
+    padding-right: var(--s-3);
+  }
+
+  .queue-table th:first-child,
+  .queue-table td:first-child {
+    padding-left: var(--s-5);
+  }
+
+  .queue-table th:last-child,
+  .queue-table td:last-child {
+    padding-right: var(--s-5);
   }
 
   .hero {
@@ -2006,10 +2043,20 @@
 
   .queue-table .col-reason {
     grid-column: 1 / -1;
-    grid-row: 4;
+    grid-row: 3;
     min-width: 0;
     max-width: none;
     margin-top: var(--s-2);
+  }
+
+  /* Phone rows: title, entity and amount, main reason. The reference and date
+     are in the contract popup. */
+  .queue-table .col-contract .cell-sub {
+    display: none;
+  }
+
+  .queue-table tbody tr {
+    padding: var(--s-3) var(--s-4);
   }
 
   .skeleton-row {

@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 /**
  * The score built from blocks on one 0 to 100 track: the starting level, then
  * each indicator's points added (or taken away) in turn, ending at the score.
- * The list below it gives the same numbers in words.
+ * A key under the track names every block, including ones too narrow for an icon.
  */
 export function ScoreBuild({
   indicators,
@@ -62,6 +62,33 @@ export function ScoreBuild({
         <span>50</span>
         <span>100</span>
       </div>
+      <figcaption>
+        <ol className="build-key">
+          <li>
+            <span className="build-swatch is-base" aria-hidden="true" />
+            <span className="build-key-name">Starting level</span>
+            <span className="build-key-value">{toPoints(baseValue)}</span>
+          </li>
+          {steps.map(({ item }) => (
+            <li key={item.indicator}>
+              <span
+                className={`build-swatch ${item.contribution > 0 ? 'is-raising' : 'is-lowering'}`}
+                aria-hidden="true"
+              />
+              <span className="build-key-name">
+                <Icon name={item.indicator} size={14} />
+                {INDICATORS[item.indicator].label}
+              </span>
+              <span className="build-key-value">{formatContribution(item.contribution)}</span>
+            </li>
+          ))}
+          <li className="build-key-total">
+            <span className="build-swatch is-score" aria-hidden="true" />
+            <span className="build-key-name">Score</span>
+            <span className="build-key-value">{toPoints(score)}</span>
+          </li>
+        </ol>
+      </figcaption>
     </figure>
   );
 }

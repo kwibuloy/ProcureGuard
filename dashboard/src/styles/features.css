@@ -1173,3 +1173,65 @@ body:has(.compare-tray) .toasts {
     grid-column: 2;
   }
 }
+
+/* The key under the score track: every block named, left to right. */
+.build-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  margin: var(--s-4) 0 0;
+  padding: var(--s-3) 0 0;
+  border-top: var(--bw) solid var(--hairline-strong);
+  list-style: none;
+  font-size: var(--t-sm);
+}
+
+.build-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.build-key-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-2);
+}
+
+.build-key-value {
+  font-weight: var(--w-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.build-key-total .build-key-name {
+  color: var(--ink);
+  font-weight: var(--w-semibold);
+}
+
+.build-swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: var(--bw-thin) solid var(--line);
+  border-radius: 3px;
+}
+
+.build-swatch.is-base {
+  background: var(--mark-muted);
+}
+
+.build-swatch.is-raising {
+  background: var(--raises);
+}
+
+.build-swatch.is-lowering {
+  background: var(--lowers);
+}
+
+.build-swatch.is-score {
+  width: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--ink);
+}

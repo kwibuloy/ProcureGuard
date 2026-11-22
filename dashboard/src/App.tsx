@@ -40,6 +40,9 @@ const PrivacyPage = lazy(() =>
 const ComparePage = lazy(() =>
   import('./pages/ComparePage').then((m) => ({ default: m.ComparePage })),
 );
+const PatternsPage = lazy(() =>
+  import('./pages/PatternsPage').then((m) => ({ default: m.PatternsPage })),
+);
 const StabilityPage = lazy(() =>
   import('./pages/StabilityPage').then((m) => ({ default: m.StabilityPage })),
 );
@@ -131,6 +134,7 @@ function RunPicker({ shownId }: { shownId: number | null }) {
 
 const NAV: { to: string; label: string; icon: IconName; also: string[] }[] = [
   { to: '/', label: 'Contracts', icon: 'flag', also: ['/contracts', '/profile', '/compare'] },
+  { to: '/patterns', label: 'Patterns', icon: 'map', also: [] },
   { to: '/about', label: 'About', icon: 'info', also: [] },
 ];
 
@@ -271,6 +275,11 @@ function Layout() {
                   </NavLink>
                 </li>
                 <li>
+                  <NavLink to="/patterns" className="text-link">
+                    Patterns
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink to="/about" className="text-link">
                     How scores work
                   </NavLink>
@@ -351,6 +360,7 @@ export default function App() {
                   <Route path="contracts/:id" element={<ContractPanel />} />
                 </Route>
                 <Route path="/profile/:kind" element={<ProfilePage />} />
+                <Route path="/patterns" element={<PatternsPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/signin" element={<SignInPage />} />
                 <Route path="/terms" element={<TermsPage />} />

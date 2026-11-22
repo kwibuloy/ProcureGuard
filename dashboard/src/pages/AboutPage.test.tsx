@@ -67,8 +67,9 @@ describe('AboutPage', () => {
   it('never calls document requests bids or bidders, except to say they are not', () => {
     renderAbout();
 
-    const indicatorText = screen.getByRole('heading', { name: 'The four indicators' })
-      .parentElement!.textContent!;
+    const indicatorText = screen
+      .getByRole('heading', { name: 'The four indicators' })
+      .closest('details, section')!.textContent!;
     expect(indicatorText).toContain('requested the bidding documents');
     expect(indicatorText).not.toMatch(/number of bidders/i);
   });

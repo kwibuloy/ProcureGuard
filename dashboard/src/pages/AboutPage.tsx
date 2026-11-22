@@ -140,8 +140,11 @@ function HowItWorks() {
         </div>
       </div>
 
-      <section>
-        <h3>The four indicators</h3>
+      <details className="fold" open>
+        <summary>
+          <h3>The four indicators</h3>
+          <Icon name="chevronDown" />
+        </summary>
         <p>
           Each contract is measured on four indicators that the procurement literature, the
           Philippine Competition Commission and the procurement rules associate with weaker
@@ -161,10 +164,13 @@ function HowItWorks() {
             </div>
           ))}
         </div>
-      </section>
+      </details>
 
-      <section>
-        <h3>How the score is produced</h3>
+      <details className="fold">
+        <summary>
+          <h3>How the score is produced</h3>
+          <Icon name="chevronDown" />
+        </summary>
         <p>
           No list of confirmed cases of wrongdoing exists for these contracts, so no model here is
           trained to recognise wrongdoing. The score comes from an Isolation Forest, an unsupervised
@@ -204,10 +210,13 @@ function HowItWorks() {
           one win. Where an indicator cannot be computed for a contract, it is shown as not computed
           and treated as typical.
         </p>
-      </section>
+      </details>
 
-      <section>
-        <h3>Where the data comes from</h3>
+      <details className="fold">
+        <summary>
+          <h3>Where the data comes from</h3>
+          <Icon name="chevronDown" />
+        </summary>
         <p>
           Records come from the PhilGEPS Open Data Portal for 2024, limited to contracts classified
           as civil works. Only structured fields are used: procuring entity, approved budget,
@@ -216,10 +225,13 @@ function HowItWorks() {
           collected for only part of the notices so far (see below), and where it is missing that
           indicator is not computed.
         </p>
-      </section>
+      </details>
 
-      <section>
-        <h3>What the system cannot see</h3>
+      <details className="fold">
+        <summary>
+          <h3>What the system cannot see</h3>
+          <Icon name="chevronDown" />
+        </summary>
         <ul>
           <li>How many bids were actually submitted, or who the losing bidders were.</li>
           <li>Who owns or controls a company, or whether separate companies are related.</li>
@@ -232,7 +244,7 @@ function HowItWorks() {
           high score is not accused. Findings have to be established from source records by the
           people responsible for doing so.
         </p>
-      </section>
+      </details>
     </section>
   );
 }
@@ -319,127 +331,133 @@ function AboutTheData() {
           />
         </dl>
 
-        <div className="quality-grid">
-          <div className="card">
-            <h3>From published rows to contracts</h3>
-            <p className="card-note">
-              A published row is one line item, so a contract usually spans several rows. Only
-              awarded civil works contracts are kept.
-            </p>
-            {rowsRead ? (
-              <>
-                <BarList
-                  max={rowsRead}
-                  items={[
-                    {
-                      key: 'read',
-                      label: 'Rows read',
-                      value: rowsRead,
-                      display: formatCount(rowsRead),
-                    },
-                    {
-                      key: 'civil',
-                      label: 'Civil works rows',
-                      value: intake.civil_works_rows ?? 0,
-                      display: formatCount(intake.civil_works_rows ?? 0),
-                    },
-                    {
-                      key: 'contracts',
-                      label: 'Contracts kept',
-                      value: intake.contracts ?? data.contracts,
-                      display: formatCount(intake.contracts ?? data.contracts),
-                    },
-                  ]}
-                />
-                <h4 className="subhead">Rows left out</h4>
-                <table className="plain-table">
-                  <tbody>
-                    {EXCLUSIONS.filter(([key]) => intake[key]).map(([key, label]) => (
-                      <tr key={key}>
-                        <th scope="row">{label}</th>
-                        <td>{formatCount(intake[key]!)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            ) : (
-              <Notice title="No load report is stored" />
-            )}
+        <details className="fold">
+          <summary>
+            Show the data quality tables
+            <Icon name="chevronDown" />
+          </summary>
+          <div className="quality-grid">
+            <div className="card">
+              <h3>From published rows to contracts</h3>
+              <p className="card-note">
+                A published row is one line item, so a contract usually spans several rows. Only
+                awarded civil works contracts are kept.
+              </p>
+              {rowsRead ? (
+                <>
+                  <BarList
+                    max={rowsRead}
+                    items={[
+                      {
+                        key: 'read',
+                        label: 'Rows read',
+                        value: rowsRead,
+                        display: formatCount(rowsRead),
+                      },
+                      {
+                        key: 'civil',
+                        label: 'Civil works rows',
+                        value: intake.civil_works_rows ?? 0,
+                        display: formatCount(intake.civil_works_rows ?? 0),
+                      },
+                      {
+                        key: 'contracts',
+                        label: 'Contracts kept',
+                        value: intake.contracts ?? data.contracts,
+                        display: formatCount(intake.contracts ?? data.contracts),
+                      },
+                    ]}
+                  />
+                  <h4 className="subhead">Rows left out</h4>
+                  <table className="plain-table">
+                    <tbody>
+                      {EXCLUSIONS.filter(([key]) => intake[key]).map(([key, label]) => (
+                        <tr key={key}>
+                          <th scope="row">{label}</th>
+                          <td>{formatCount(intake[key]!)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              ) : (
+                <Notice title="No load report is stored" />
+              )}
+            </div>
+
+            <div className="card">
+              <h3>How complete each field is</h3>
+              <p className="card-note">
+                Share of contracts where the field is published, least complete first. An indicator
+                that needs a missing field is not computed for that contract.
+              </p>
+              <BarList
+                max={data.contracts}
+                items={fields.map((field) => ({
+                  key: field.field,
+                  label: field.label,
+                  value: field.present,
+                  display: formatPercent(field.present / data.contracts, 1),
+                  note: `${formatCount(data.contracts - field.present)} missing · needed for ${field.usedFor.toLowerCase()}`,
+                }))}
+              />
+            </div>
           </div>
 
-          <div className="card">
-            <h3>How complete each field is</h3>
-            <p className="card-note">
-              Share of contracts where the field is published, least complete first. An indicator
-              that needs a missing field is not computed for that contract.
-            </p>
-            <BarList
-              max={data.contracts}
-              items={fields.map((field) => ({
-                key: field.field,
-                label: field.label,
-                value: field.present,
-                display: formatPercent(field.present / data.contracts, 1),
-                note: `${formatCount(data.contracts - field.present)} missing · needed for ${field.usedFor.toLowerCase()}`,
-              }))}
-            />
-          </div>
-        </div>
-
-        <div className="quality-grid">
-          <div className="card">
-            <h3>Names written more than one way</h3>
-            <p className="card-note">
-              The same organization is often published under several spellings. Names are
-              standardized so its contracts are counted together; the published spelling is kept.
-            </p>
-            <table className="plain-table">
-              <thead>
-                <tr>
-                  <th scope="col" />
-                  <th scope="col">Spellings published</th>
-                  <th scope="col">After standardizing</th>
-                </tr>
-              </thead>
-              <tbody>
-                {names.map(([label, published, standardized]) => (
-                  <tr key={label}>
-                    <th scope="row">{label}</th>
-                    <td>{published === undefined ? 'n/a' : formatCount(published)}</td>
-                    <td>{standardized === undefined ? 'n/a' : formatCount(standardized)}</td>
+          <div className="quality-grid">
+            <div className="card">
+              <h3>Names written more than one way</h3>
+              <p className="card-note">
+                The same organization is often published under several spellings. Names are
+                standardized so its contracts are counted together; the published spelling is kept.
+              </p>
+              <table className="plain-table">
+                <thead>
+                  <tr>
+                    <th scope="col" />
+                    <th scope="col">Spellings published</th>
+                    <th scope="col">After standardizing</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {names.map(([label, published, standardized]) => (
+                    <tr key={label}>
+                      <th scope="row">{label}</th>
+                      <td>{published === undefined ? 'n/a' : formatCount(published)}</td>
+                      <td>{standardized === undefined ? 'n/a' : formatCount(standardized)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="card">
-            <h3>Values that cannot be right</h3>
-            <p className="card-note">
-              These are kept as published and counted here. They point to entry errors a reviewer
-              should expect to meet.
-            </p>
-            <table className="plain-table">
-              <tbody>
-                <tr>
-                  <th scope="row">Contracts awarded before the notice was published</th>
-                  <td>{formatCount(data.awardedBeforePublished)}</td>
-                </tr>
-                <tr>
-                  <th scope="row">Contract amount above the approved budget</th>
-                  <td>{formatCount(data.amountAboveBudget)}</td>
-                </tr>
-                {unreadable.map(([key, count]) => (
-                  <tr key={key}>
-                    <th scope="row">Unreadable value in “{key.split(': ')[1]}”</th>
-                    <td>{formatCount(count)}</td>
+            <div className="card">
+              <h3>Values that cannot be right</h3>
+              <p className="card-note">
+                These are kept as published and counted here. They point to entry errors a reviewer
+                should expect to meet.
+              </p>
+              <table className="plain-table">
+                <tbody>
+                  <tr>
+                    <th scope="row">Contracts awarded before the notice was published</th>
+                    <td>{formatCount(data.awardedBeforePublished)}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                  <tr>
+                    <th scope="row">Contract amount above the approved budget</th>
+                    <td>{formatCount(data.amountAboveBudget)}</td>
+                  </tr>
+                  {unreadable.map(([key, count]) => (
+                    <tr key={key}>
+                      <th scope="row">Unreadable value in “{key.split(': ')[1]}”</th>
+                      <td>{formatCount(count)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </details>
 
         {data.load && (
           <p className="page-foot">
