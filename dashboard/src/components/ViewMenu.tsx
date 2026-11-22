@@ -6,7 +6,7 @@ import { Icon } from './Icon';
 /** Columns that can be hidden; the contract and its score always stay. */
 const HIDEABLE = COLUMNS;
 
-/** Columns the layout drops on narrow screens (styles.css), whatever the setting. */
+/** Columns the layout drops on narrow screens (styles/pages.css), whatever the setting. */
 const NARROW_HIDDEN: Record<string, readonly string[]> = {
   // Phone cards leave out the rank (their order shows it) and the awardee, to stay
   // short; the contract panel shows both.
@@ -60,9 +60,9 @@ export function ViewMenu({
 
   return (
     <details className="menu" ref={menu}>
-      <summary className="button button-outline">
-        <Icon name="sliders" />
-        View
+      <summary className="button button-display" aria-label="Display options">
+        <Icon name="columns" />
+        <span className="button-label">Display</span>
       </summary>
       <div className="menu-panel">
         <fieldset>

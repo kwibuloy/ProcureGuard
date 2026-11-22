@@ -25,6 +25,10 @@ With no real data yet, load and score demonstration contracts from the repo root
 | `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won, with contracts by award month; entities link to a search for their COA audit reports                                                                                                     |
 | `/about`                                          | Common questions, how ProcureGuard works (what a flag means, the four indicators, the score, limits), and the data quality figures. `/data` and `/method` redirect to its sections                                                                    |
 | `/signin`                                         | Sign-in for the review team. Viewing never needs an account                                                                                                                                                                                           |
+| `/compare?ids=`                                   | Two contracts side by side: score, key facts and the indicators behind each score                                                                                                                                                                     |
+| `/stability`                                      | How two scoring runs rank the same contracts; a slider moves the top contracts between the two orders                                                                                                                                                 |
+| `/styleguide`                                     | The design system: every component with the rule for using it. Linked from the footer only                                                                                                                                                            |
+| `/terms`, `/privacy`                              | Terms of Use and Privacy Policy                                                                                                                                                                                                                       |
 
 Filters, sort order and page live in the URL, so a filtered view can be shared as a link. View settings (grouping lots by notice, hidden columns, compact rows) also live in the URL and are saved in the browser; a link that carries settings wins over the saved ones. The scoring run on screen is chosen in the header and lasts for the browser session.
 
@@ -32,7 +36,10 @@ Filters, sort order and page live in the URL, so a filtered view can be shared a
 
 - Select a histogram bar or a main-reason bar to filter the list; active filters appear as removable chips.
 - `J` and `K` (or the arrow keys) move through the list, `Enter` opens a contract, `Esc` closes it, `/` jumps to search. With a contract open, `J` and `K` go to the next and previous one.
-- "Mark as reviewed" is saved in the browser only (`localStorage`). The API is read-only, so nothing about a review reaches the server or other reviewers.
+- Typing two or more letters in search suggests contracts, procuring entities, awardees and places.
+- **Saved views** keep a named set of filters in this browser. **Compare** in a contract's panel adds it to a tray; two make a side-by-side page.
+- The ring beside the list title shows how many of the run's 50 highest-ranked flags have a review. Reviews are written by signed-in team members and are public.
+- `?` lists the keyboard shortcuts. First-time visitors get a three-step tour; "Take the tour" in the footer replays it.
 
 ## Phones
 
@@ -57,13 +64,20 @@ The map card shows flagged contracts by where the procuring entity is based (Phi
 
 ## Design rules
 
-- **No alarm colors.** Scores and flags are drawn in ink on paper tones. A flag is a prompt to review, so nothing is styled as a warning or an error.
-- **Color means one thing, and nothing else.** Red and blue mean an indicator raised or lowered a score. The pair passes the colorblind checks in light and dark themes, and is also written out in a legend or label. Maps and charts use ink shades.
-- **Every score shows its reasons.** A score never appears in the detail view without the four indicators, their points and a sentence stating the figures behind each. The queue's Why column says the same in short: the indicator that raised the score most, its points, the figures behind it, and any other indicator that also raised it.
+The design system lives in `src/styles/`: `tokens.css` (every colour, border, shadow, radius, space, type size and timing, for light and dark), then `base.css`, `components.css`, `layout.css` and `pages.css`. Components use tokens only.
+
+- **Neubrutalist.** Warm paper, 2px ink outlines, hard offset shadows, no blur and no gradients. Display type is Space Grotesk; text is Inter; mono only for keys and code. Nothing lighter than regular weight, nothing italic.
+- **One accent, used for action.** Cyan marks the action to take (one primary button per view), the selected item and keyboard focus. It never appears in score explanations.
+- **No alarm colours.** Scores and flags are drawn in ink. A flag is a prompt to review, so nothing is styled as a warning or an error.
+- **Red and blue mean one thing.** An indicator raised or lowered a score. They appear only in score explanations, always with a legend or label.
+- **Every score shows its reasons.** A score never appears in the detail view without the four indicators, their points and a sentence stating the figures behind each.
 - **Wording.** "Flagged for review" and "statistically unusual" only. Document requests are never called bids or bidders. Indicator names and sentences live in `src/indicators.ts`.
-- **Depth comes from light, not color.** Cards sit on layered shadows with a lit top edge and rise slightly under the pointer; a soft highlight follows the pointer across a card (`useSpotlight.ts`).
-- **Motion shows where something came from.** Bars grow from their baseline, figures count up (`CountUp.tsx`), rows arrive in order. All of it is off under `prefers-reduced-motion`, and in print.
-- Colors, shadows, spacing and both themes are tokens at the top of `src/styles.css`.
+- **Motion gives feedback.** The contract panel swings in from the edge, menus drop in 3D, bars grow from their baseline, figures count up, and a toast confirms actions that change something out of view (filtering from a chart or the map, copying a link, saving a review). Loading shows skeletons shaped like the content. All motion is cut to an instant under `prefers-reduced-motion`.
+- **Component rules.** One primary button per view. The cyan highlight appears once per headline. A number always says what it counts and what it is out of. Any term a newcomer might not know gets a tip (`src/glossary.ts`). Confirm any action whose result is out of view with a toast. Every empty state says what happened and offers the most likely next step. `/styleguide` shows each of these.
+- **Trust.** The hero shows where the data comes from, when it was scored and the run. The contract panel keeps a one-line disclaimer in view, so a screenshot of it carries the caveat.
+- **Accessibility.** The contract panel keeps keyboard focus inside it. Histogram bars and map places can be reached with Tab and moved between with the arrow keys. Every chart has a text or table alternative.
+- **Spam protection.** The API rate-limits and locks sign-in. The forms add a hidden field, a minimum fill time and a pause between attempts (`src/spam.ts`).
+- **Nothing secret in the bundle.** The only build variable is `VITE_RESPONSE_EMAIL`, a public address.
 
 ## Checks
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 export type Indicator =
   'single_requester' | 'repeated_winner' | 'price_deviation' | 'contract_splitting';
@@ -241,6 +241,19 @@ export interface Loaded<T> {
   reload: () => void;
 }
 
+/**
+ * Responses already seen this visit, by path. A page the reader comes back to
+ * shows them at once while a fresh copy loads in the background.
+ */
+const seen = new Map<string, unknown>();
+const SEEN_LIMIT = 60;
+
+function remember(path: string, data: unknown) {
+  seen.delete(path);
+  seen.set(path, data);
+  if (seen.size > SEEN_LIMIT) seen.delete(seen.keys().next().value!);
+}
+
 /** Fetch JSON for a path, keeping the previous data on screen while the next loads. */
 export function useApi<T>(path: string | null): Loaded<T> {
   const [state, setState] = useState<{ data: T | null; error: string | null; path: string | null }>(
@@ -255,7 +268,9 @@ export function useApi<T>(path: string | null): Loaded<T> {
     // newer one: a slow earlier request can finish after a fast later one.
     get<T>(path, controller.signal)
       .then((data) => {
-        if (!controller.signal.aborted) setState({ data, error: null, path });
+        if (controller.signal.aborted) return;
+        remember(path, data);
+        setState({ data, error: null, path });
       })
       .catch((error: Error) => {
         if (error.name !== 'AbortError' && !controller.signal.aborted) {
@@ -265,13 +280,31 @@ export function useApi<T>(path: string | null): Loaded<T> {
     return () => controller.abort();
   }, [path, attempt]);
 
+  const cached = path && state.path !== path ? (seen.get(path) as T | undefined) : undefined;
   return {
-    data: path ? state.data : null,
+    data: path ? (cached ?? state.data) : null,
     error: state.path === path ? state.error : null,
-    loading: path !== null && state.path !== path,
+    loading: path !== null && state.path !== path && cached === undefined,
     reload: () => {
+      seen.delete(path ?? '');
       setState((current) => ({ ...current, path: null }));
       setAttempt((count) => count + 1);
     },
   };
+}
+
+/** Whether the browser is online, kept current. */
+export function useOnline(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener('online', onChange);
+      window.addEventListener('offline', onChange);
+      return () => {
+        window.removeEventListener('online', onChange);
+        window.removeEventListener('offline', onChange);
+      };
+    },
+    () => navigator.onLine,
+    () => true,
+  );
 }

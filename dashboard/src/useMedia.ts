@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-/** Phone layout: matches the 860px breakpoint in styles.css. */
+/** Phone layout: matches the 860px breakpoint in styles/layout.css. */
 export const PHONE = '(max-width: 860px)';
 
 /** Whether a CSS media query matches, kept current as the window changes. */

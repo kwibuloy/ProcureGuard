@@ -12,7 +12,7 @@ import { BarList } from '../components/BarList';
 import { ContractTable } from '../components/ContractTable';
 import { Icon } from '../components/Icon';
 import { MonthBars } from '../components/MonthBars';
-import { Notice, SkeletonRows, Tile } from '../components/States';
+import { Notice, SkeletonCard, SkeletonRows, Tile } from '../components/States';
 import {
   formatCount,
   formatDate,
@@ -95,8 +95,7 @@ export function ProfilePage() {
       </div>
     );
   }
-  if (!profile.data || !run)
-    return <div className="card skeleton skeleton-block" aria-busy="true" />;
+  if (!profile.data || !run) return <SkeletonCard lines={3} block />;
 
   const data = profile.data;
   const leader = data.top[0];

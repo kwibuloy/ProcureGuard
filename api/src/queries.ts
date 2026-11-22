@@ -10,3 +10,4 @@ export * from './queries/contracts.js';
 export * from './queries/profile.js';
 export * from './queries/peers.js';
 export * from './queries/feed.js';
+export * from './queries/explore.js';
