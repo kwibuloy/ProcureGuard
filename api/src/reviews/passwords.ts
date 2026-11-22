@@ -2,8 +2,10 @@
 import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto';
 
 const KEY_LENGTH = 64;
-// Cost parameters: about 50 ms per hash, enough to make guessing slow.
-const OPTIONS = { N: 16_384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+// Cost parameters: OWASP's recommended minimum for scrypt (N = 2^17, r = 8,
+// p = 1). About 470 ms per hash on a laptop. It needs 128 * N * r = 128 MiB of
+// memory, above Node's 32 MiB default, so maxmem is raised with some headroom.
+const OPTIONS = { N: 131_072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
 
 export const MIN_PASSWORD_LENGTH = 12;
 
@@ -40,6 +42,21 @@ export async function verifyPassword(password: string, stored: string): Promise<
     maxmem: OPTIONS.maxmem,
   });
   return key.length === expected.length && timingSafeEqual(key, expected);
+}
+
+/**
+ * True when a stored hash was made with different cost parameters than the
+ * current ones, so it should be replaced after the next successful sign-in.
+ * Until then an old, cheaper hash answers faster than an unknown username does.
+ */
+export function needsRehash(stored: string): boolean {
+  const [scheme, n, r, p] = stored.split('$');
+  return (
+    scheme !== 'scrypt' ||
+    Number(n) !== OPTIONS.N ||
+    Number(r) !== OPTIONS.r ||
+    Number(p) !== OPTIONS.p
+  );
 }
 
 // Spent on an unknown username too, so a login answers in the same time

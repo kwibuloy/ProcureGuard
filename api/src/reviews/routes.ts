@@ -9,7 +9,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { rateLimit, type RateLimit } from '../http.js';
 import type { Db } from '../queries/shared.js';
-import { spendDummyHash, verifyPassword } from './passwords.js';
+import { hashPassword, needsRehash, spendDummyHash, verifyPassword } from './passwords.js';
 
 export const REVIEW_STATUSES = ['not_reviewed', 'explained', 'needs_follow_up'] as const;
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
@@ -143,6 +143,13 @@ export function reviewRoutes(app: Express, db: Db, options: ReviewOptions) {
     await db.query(`UPDATE reviewers SET failed_logins = 0, locked_until = NULL WHERE id = $1`, [
       account.id,
     ]);
+    // Bring a hash made with older, cheaper settings up to the current ones.
+    if (needsRehash(account.hash)) {
+      await db.query(`UPDATE reviewers SET password_hash = $2 WHERE id = $1`, [
+        account.id,
+        await hashPassword(password),
+      ]);
+    }
     await db.query(`DELETE FROM reviewer_sessions WHERE expires_at < now()`);
     await db.query(
       `INSERT INTO reviewer_sessions (token_hash, reviewer_id, expires_at)
