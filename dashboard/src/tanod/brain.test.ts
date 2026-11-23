@@ -265,8 +265,8 @@ describe('Tanod looks things up', () => {
     );
     expect(reply.text[2]).toBe('#2 · score 88 · Seawall (Town B).');
     expect(reply.links).toEqual([
-      { label: 'Open #1', to: '/contracts/11' },
-      { label: 'Open #2', to: '/contracts/12' },
+      { label: '#1 · Road concreting', to: '/contracts/11' },
+      { label: '#2 · Seawall', to: '/contracts/12' },
     ]);
     expect(wordingProblems(sentences(reply))).toEqual([]);
   });

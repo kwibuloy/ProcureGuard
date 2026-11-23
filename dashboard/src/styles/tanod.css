@@ -19,7 +19,9 @@
   pointer-events: auto;
 }
 
-/* The mascot itself is the button: no box, he stands on the page. */
+/* The mascot itself is the button: no box, he stands on the page. He keeps
+   one size open or closed (a WebGL canvas that changes size clears and
+   stutters); a press only nudges him down. */
 .tanod-launcher {
   position: relative;
   flex: none;
@@ -29,14 +31,11 @@
   border: 0;
   background: none;
   cursor: pointer;
-  transition:
-    width var(--dur-3) var(--ease-swing),
-    height var(--dur-3) var(--ease-swing);
+  transition: transform var(--dur-1) var(--ease-out);
 }
 
-.tanod.is-open .tanod-launcher {
-  width: 136px;
-  height: 168px;
+.tanod-launcher:active {
+  transform: translateY(2px);
 }
 
 .tanod-launcher:focus-visible {
@@ -45,28 +44,12 @@
   border-radius: var(--r);
 }
 
-.tanod-still {
+.tanod-still,
+.tanod-stage-3d {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-}
-
-/* The 3D view keeps one size (the open size) and is scaled to fit the button.
-   Resizing a WebGL canvas clears it, so growing the box itself made him stutter. */
-.tanod-stage-3d {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 136px;
-  height: 168px;
-  transform: scale(var(--tanod-scale, 0.765));
-  transform-origin: 0 100%;
-  transition: transform var(--dur-3) var(--ease-swing);
-}
-
-.tanod.is-open .tanod-stage-3d {
-  --tanod-scale: 1;
 }
 
 .tanod-still {
@@ -85,22 +68,89 @@
   }
 }
 
-/* Speech bubble that pops up now and then while the chat is closed. */
-.tanod-teaser {
+/* "Ask Tanod": a speech bubble beside him while the chat is closed. Its second
+   line changes to a teaser now and then, with a small hop. */
+.tanod-cta {
+  position: relative;
   align-self: center;
-  margin-bottom: 72px;
-  max-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 40px var(--s-2);
   padding: var(--s-2) var(--s-3);
   border: var(--border);
-  border-radius: var(--r) var(--r) var(--r) var(--r-xs);
+  border-radius: var(--r);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   color: var(--ink);
-  font: 600 var(--t-sm) / 1.35 var(--font-display);
   text-align: left;
   cursor: pointer;
   transform-origin: 0 100%;
   animation: tanod-pop var(--dur-3) var(--ease-spring);
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+/* The tail, pointing at Tanod. */
+.tanod-cta::before,
+.tanod-cta::after {
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  border-style: solid;
+}
+
+.tanod-cta::before {
+  left: -11px;
+  border-width: 7px 11px 7px 0;
+  border-color: transparent var(--line) transparent transparent;
+}
+
+.tanod-cta::after {
+  left: -7px;
+  border-width: 5px 8px 5px 0;
+  border-color: transparent var(--surface) transparent transparent;
+  bottom: 12px;
+}
+
+.tanod-cta:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.tanod-cta:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-xs);
+}
+
+.tanod-cta.is-teasing {
+  animation: tanod-hop var(--dur-4) var(--ease-spring);
+}
+
+.tanod-cta-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 var(--t-base) / 1.2 var(--font-display);
+}
+
+/* A live dot: he is here and listening. */
+.tanod-cta-dot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  background: var(--accent);
+  animation: tanod-dot-pulse 2s ease-in-out infinite;
+}
+
+.tanod-cta-line {
+  max-width: 200px;
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+  line-height: 1.35;
+  animation: tanod-msg-in var(--dur-3) var(--ease-out);
 }
 
 @keyframes tanod-pop {
@@ -110,11 +160,26 @@
   }
 }
 
+@keyframes tanod-hop {
+  30% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+  60% {
+    transform: translateY(0) rotate(1deg);
+  }
+}
+
+@keyframes tanod-dot-pulse {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
 /* The chat panel. */
 .tanod-panel {
   display: flex;
   flex-direction: column;
-  width: min(380px, calc(100vw - 32px - 136px));
+  width: min(380px, calc(100vw - 32px - 104px));
   height: min(560px, calc(100vh - 120px));
   margin-bottom: var(--s-3);
   overflow: clip;
@@ -128,7 +193,7 @@
 
 /* With a contract panel open on the right, the chat stays narrow beside it. */
 body.has-panel .tanod-panel {
-  width: min(340px, calc(100vw - 32px - 136px));
+  width: min(340px, calc(100vw - 32px - 104px));
 }
 
 @keyframes tanod-panel-in {
@@ -215,27 +280,65 @@ body.has-panel .tanod-panel {
 
 .tanod-links {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--s-2);
+  align-self: stretch;
 }
 
+/* A link out of the chat: a full-width row with an arrow, like a list item. */
 .tanod-link {
-  padding: 4px var(--s-2);
-  border: var(--bw-thin) solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: var(--border);
   border-radius: var(--r-sm);
-  background: var(--accent-soft);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
   color: var(--ink);
-  font: 600 var(--t-xs) / 1.3 var(--font-body);
+  font: 600 var(--t-sm) / 1.3 var(--font-body);
   text-align: left;
   cursor: pointer;
   transition:
     transform var(--dur-1) var(--ease-out),
-    box-shadow var(--dur-1) var(--ease-out);
+    box-shadow var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
 }
 
 .tanod-link:hover {
   transform: translate(-1px, -1px);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
+  background: var(--accent-soft);
+}
+
+.tanod-link:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.tanod-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.tanod-link-arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: var(--bw-thin) solid var(--line);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.tanod-link:hover .tanod-link-arrow {
+  transform: translateX(2px);
 }
 
 .tanod-dots {
@@ -342,11 +445,6 @@ body.has-panel .tanod-panel {
     height: 94px;
   }
 
-  .tanod-stage-3d,
-  .tanod.is-open .tanod-stage-3d {
-    --tanod-scale: 0.56;
-  }
-
   .tanod.is-open {
     right: var(--s-2);
     flex-direction: column;
@@ -357,8 +455,6 @@ body.has-panel .tanod-panel {
     position: absolute;
     left: 0;
     top: -78px;
-    width: 76px;
-    height: 94px;
   }
 
   .tanod-panel {
@@ -367,14 +463,24 @@ body.has-panel .tanod-panel {
     margin-bottom: 0;
   }
 
-  .tanod-teaser {
-    margin-bottom: 48px;
+  /* Phones: the bubble would cover the list's controls, so it shows only
+     while he says a teaser line; the rest of the time the mascot is the button. */
+  .tanod-cta {
+    margin-bottom: 28px;
+    padding: 6px var(--s-3);
+  }
+
+  .tanod-cta:not(.is-teasing) {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tanod-still,
-  .tanod-teaser,
+  .tanod-cta,
+  .tanod-cta.is-teasing,
+  .tanod-cta-dot,
+  .tanod-cta-line,
   .tanod-panel,
   .tanod-msg,
   .tanod-chip,
@@ -383,8 +489,9 @@ body.has-panel .tanod-panel {
   }
 
   .tanod-launcher,
-  .tanod-stage-3d,
-  .tanod-link {
+  .tanod-cta,
+  .tanod-link,
+  .tanod-link-arrow {
     transition: none;
   }
 }

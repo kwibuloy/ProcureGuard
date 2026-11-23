@@ -36,10 +36,11 @@ const fetchJson: Fetcher = async <T,>(path: string) => {
   return (await response.json()) as T;
 };
 
+/** The second line of the "Ask Tanod" bubble; the teasers rotate into it now and then. */
+const CTA_LINE = 'Questions about a flag or a score?';
 const TEASERS = [
-  'Questions about a flag? Ask me!',
-  'Psst, I can explain any score.',
   'Magandang araw! Need help?',
+  'I can explain any score.',
   'Want the top flagged contracts?',
 ];
 
@@ -115,7 +116,7 @@ export function TanodChat() {
       setTeaser(TEASERS[shown % TEASERS.length]);
       setGreet((g) => g + 1);
       shown += 1;
-      hide = window.setTimeout(() => setTeaser(null), 5000);
+      hide = window.setTimeout(() => setTeaser(null), 6000);
     };
     const first = window.setTimeout(show, 6000);
     const every = window.setInterval(show, 45000);
@@ -288,7 +289,10 @@ export function TanodChat() {
                           className="tanod-link"
                           onClick={() => follow(link)}
                         >
-                          {link.label} →
+                          <span>{link.label}</span>
+                          <span className="tanod-link-arrow" aria-hidden="true">
+                            →
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -346,9 +350,25 @@ export function TanodChat() {
         </section>
       )}
 
-      {teaser && !open && (
-        <button type="button" className="tanod-teaser" onClick={openChat}>
-          {teaser}
+      {!open && (
+        // The visible call to action. The mascot beside it is the same button for
+        // keyboards and screen readers, so this one is mouse and touch only.
+        <button
+          type="button"
+          className={`tanod-cta${teaser ? ' is-teasing' : ''}`}
+          onClick={openChat}
+          onPointerEnter={() => setHover(true)}
+          onPointerLeave={() => setHover(false)}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          <span className="tanod-cta-title">
+            <span className="tanod-cta-dot" />
+            Ask Tanod
+          </span>
+          <span key={teaser ?? 'cta'} className="tanod-cta-line">
+            {teaser ?? CTA_LINE}
+          </span>
         </button>
       )}
 

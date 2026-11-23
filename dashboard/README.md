@@ -46,7 +46,7 @@ The pager offers 15, 30, 50 or 100 rows a page (`rows`); 15 is the default. The 
 
 ## Tanod, the helper
 
-Tanod, the barangay tanod mascot, stands in the bottom-left corner of every page; clicking him opens a chat. He sits on the left to stay clear of the contract panel (right), the compare tray and toasts (centre) and the phone back-to-top button (right).
+Tanod, the barangay tanod mascot, stands in the bottom-left corner of every page; clicking him, or the “Ask Tanod” bubble beside him, opens a chat. He keeps one size open or closed. On phones the bubble shows only while he says a teaser line, so it doesn’t cover the list’s controls. He sits on the left to stay clear of the contract panel (right), the compare tray and toasts (centre) and the phone back-to-top button (right).
 
 - **Answers** come from `src/tanod/brain.ts`, with no AI service: a question is matched to a written reply by its words, and replies reuse the text in `src/indicators.ts` and `src/glossary.ts`. Data questions become live lookups on the existing API: "how many are flagged" (`/api/overview`), "top flagged contracts" (`/api/contracts`), "explain contract 123" or "why is this contract flagged" with a contract open (`/api/contracts/:id`), and "find contracts in Cebu" (`/api/suggest`). Questions about guilt or corruption get a fixed reply that a flag is not a finding of wrongdoing. He says so when he doesn't understand a question, and offers questions he can answer.
 - **Tests** in `src/tanod/brain.test.ts` check that 37 sample questions reach the right reply, that every suggested question is understood, that lookups build the right sentences and links, and that no reply breaks the wording rules (no accusing words, no "bidders" as a count, no accuracy figure).

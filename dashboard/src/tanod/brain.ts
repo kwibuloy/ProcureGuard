@@ -837,7 +837,10 @@ export async function resolve(
             ),
             CAVEAT,
           ],
-          links: list.items.map((c) => ({ label: `Open #${c.rank}`, to: `/contracts/${c.id}` })),
+          links: list.items.map((c) => ({
+            label: `#${c.rank} · ${shorten(c.title, 44)}`,
+            to: `/contracts/${c.id}`,
+          })),
           suggestions: ['How is the score calculated?', 'What does a flag mean?'],
         };
       }
