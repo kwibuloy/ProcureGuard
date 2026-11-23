@@ -297,17 +297,17 @@ export default function TanodStage({
     scene.add(sun);
 
     const camera = new THREE.PerspectiveCamera(24, 1, 0.1, 30);
-    camera.position.set(0.9, 1.25, 5.2);
+    // Seen from his right, so at rest he faces into the page (he stands bottom-left).
+    camera.position.set(-0.9, 1.25, 5.2);
     camera.lookAt(0, 0.93, 0);
 
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    const pointer = new THREE.Vector2();
+    // Where the cursor is on the page, and when it last moved.
+    const pointer = { x: 0, y: 0, moved: -Infinity };
     const onPointer = (event: PointerEvent) => {
-      const box = element.getBoundingClientRect();
-      pointer.set(
-        ((event.clientX - box.left) / box.width) * 2 - 1,
-        -(((event.clientY - box.top) / box.height) * 2 - 1),
-      );
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      pointer.moved = performance.now();
     };
     window.addEventListener('pointermove', onPointer, { passive: true });
 
@@ -394,10 +394,21 @@ export default function TanodStage({
         armRZ: -Math.sin(time * 2.2) * 0.03 * motion,
         ...moodPose(mood, t, motion),
       };
-      if (s.hover && mood === 'wave') {
-        // Look at the pointer.
-        target.headY = THREE.MathUtils.clamp(pointer.x * 0.5, -0.5, 0.5);
-        target.headX = THREE.MathUtils.clamp(-pointer.y * 0.25, -0.25, 0.25);
+      // Follow the cursor anywhere on the page: head first, body a little.
+      // He keeps watching for a few seconds after it stops, then looks around again.
+      const sinceMove = now - pointer.moved;
+      if (motion && sinceMove < 6000) {
+        const box = element.getBoundingClientRect();
+        const dx = pointer.x - (box.left + box.width / 2);
+        const dy = pointer.y - (box.top + box.height * 0.3); // from his eyes
+        const yaw = THREE.MathUtils.clamp(Math.atan2(dx, 520), -0.95, 0.95);
+        const pitch = THREE.MathUtils.clamp(Math.atan2(dy, 700), -0.4, 0.25);
+        // Gestures that aim the head (pointing, thinking) keep most of their own pose.
+        const busy = mood === 'point' || mood === 'think';
+        const w = (busy ? 0.3 : 1) * (sinceMove < 4000 ? 1 : 1 - (sinceMove - 4000) / 2000);
+        target.headY = lerp(target.headY, yaw * 0.65, w);
+        target.turn = lerp(target.turn, yaw * 0.35, w);
+        target.headX = lerp(target.headX, pitch, w);
       }
       if (s.talking) {
         target.headX += Math.sin(time * 7) * 0.035 * motion;
