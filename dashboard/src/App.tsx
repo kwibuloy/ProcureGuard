@@ -23,6 +23,7 @@ import { ContractPanel } from './pages/ContractPanel';
 import { QueuePage } from './pages/QueuePage';
 import { ReviewerProvider, useReviewer } from './reviews';
 import { RunProvider, useRuns } from './run';
+import { TanodChat } from './tanod/TanodChat';
 
 // The Contracts page loads first; the others load when they are opened.
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
@@ -244,6 +245,7 @@ function Layout() {
 
       <CompareTray />
       <Shortcuts />
+      <TanodChat />
 
       {/* Phones: the same links in a bar at the bottom of the screen, within thumb reach. */}
       <nav className="bottom-nav phone-only" aria-label="Main">

@@ -1,0 +1,396 @@
+/* Tanod, the helper mascot and his chat (src/tanod/). He lives in the
+   bottom-left corner, clear of the contract panel (right), the compare tray and
+   toasts (centre) and the phone back-to-top button (right); his chat opens to
+   his right. Motion stops under prefers-reduced-motion. */
+
+.tanod {
+  position: fixed;
+  left: var(--s-4);
+  bottom: var(--s-3);
+  z-index: 35;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  gap: var(--s-2);
+  pointer-events: none;
+}
+
+.tanod > * {
+  pointer-events: auto;
+}
+
+/* The mascot itself is the button: no box, he stands on the page. */
+.tanod-launcher {
+  position: relative;
+  flex: none;
+  width: 104px;
+  height: 128px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition:
+    width var(--dur-3) var(--ease-swing),
+    height var(--dur-3) var(--ease-swing);
+}
+
+.tanod.is-open .tanod-launcher {
+  width: 136px;
+  height: 168px;
+}
+
+.tanod-launcher:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r);
+}
+
+.tanod-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The 3D view keeps one size (the open size) and is scaled to fit the button.
+   Resizing a WebGL canvas clears it, so growing the box itself made him stutter. */
+.tanod-stage-3d {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 136px;
+  height: 168px;
+  transform: scale(var(--tanod-scale, 0.765));
+  transform-origin: 0 100%;
+  transition: transform var(--dur-3) var(--ease-swing);
+}
+
+.tanod.is-open .tanod-stage-3d {
+  --tanod-scale: 1;
+}
+
+.tanod-still {
+  object-fit: contain;
+  object-position: bottom;
+  animation: tanod-bob 2.8s ease-in-out infinite;
+}
+
+.tanod-stage-3d canvas {
+  display: block;
+}
+
+@keyframes tanod-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Speech bubble that pops up now and then while the chat is closed. */
+.tanod-teaser {
+  align-self: center;
+  margin-bottom: 72px;
+  max-width: 190px;
+  padding: var(--s-2) var(--s-3);
+  border: var(--border);
+  border-radius: var(--r) var(--r) var(--r) var(--r-xs);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  font: 600 var(--t-sm) / 1.35 var(--font-display);
+  text-align: left;
+  cursor: pointer;
+  transform-origin: 0 100%;
+  animation: tanod-pop var(--dur-3) var(--ease-spring);
+}
+
+@keyframes tanod-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(8px);
+  }
+}
+
+/* The chat panel. */
+.tanod-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 32px - 136px));
+  height: min(560px, calc(100vh - 120px));
+  margin-bottom: var(--s-3);
+  overflow: clip;
+  border: var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  transform-origin: 0 100%;
+  animation: tanod-panel-in var(--dur-4) var(--ease-swing);
+}
+
+/* With a contract panel open on the right, the chat stays narrow beside it. */
+body.has-panel .tanod-panel {
+  width: min(340px, calc(100vw - 32px - 136px));
+}
+
+@keyframes tanod-panel-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(14deg) scale(0.85) translateY(24px);
+  }
+}
+
+.tanod-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  border-bottom: var(--border);
+  background: var(--accent-soft);
+}
+
+.tanod-head h2 {
+  margin: 0;
+  font: 700 var(--t-md) / 1.2 var(--font-display);
+}
+
+.tanod-head p {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+}
+
+.tanod-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tanod-msg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  max-width: 92%;
+  animation: tanod-msg-in var(--dur-3) var(--ease-out);
+}
+
+.tanod-msg.from-you {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+@keyframes tanod-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.tanod-bubble {
+  padding: var(--s-2) var(--s-3);
+  border: var(--border);
+  border-radius: var(--r-xs) var(--r) var(--r) var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}
+
+.from-you .tanod-bubble {
+  border-radius: var(--r) var(--r-xs) var(--r) var(--r);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.tanod-bubble p {
+  margin: 0;
+}
+
+.tanod-bubble p + p {
+  margin-top: var(--s-2);
+}
+
+.tanod-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.tanod-link {
+  padding: 4px var(--s-2);
+  border: var(--bw-thin) solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font: 600 var(--t-xs) / 1.3 var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+.tanod-link:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-xs);
+}
+
+.tanod-dots {
+  display: flex;
+  gap: 5px;
+  padding: var(--s-3);
+}
+
+.tanod-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  animation: tanod-dot 1s ease-in-out infinite;
+}
+
+.tanod-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.tanod-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes tanod-dot {
+  50% {
+    transform: translateY(-4px);
+    opacity: 0.4;
+  }
+}
+
+.tanod-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  padding: 0 var(--s-4) var(--s-3);
+}
+
+.tanod-chip {
+  padding: 5px var(--s-3);
+  border: var(--bw-thin) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: 500 var(--t-xs) / 1.3 var(--font-body);
+  cursor: pointer;
+  animation: tanod-msg-in var(--dur-3) var(--ease-out) backwards;
+}
+
+.tanod-chip:hover {
+  background: var(--surface-2);
+}
+
+.tanod-chip:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.tanod-chip:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.tanod-chip:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.tanod-form {
+  display: flex;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-top: var(--border);
+  background: var(--surface-2);
+}
+
+.tanod-form input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--s-2) var(--s-3);
+  border: var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+}
+
+.tanod-form input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* Phones: above the bottom tab bar; the open chat becomes a sheet. */
+@media (max-width: 859px) {
+  .tanod {
+    left: var(--s-2);
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  body.has-panel .tanod {
+    display: none;
+  }
+
+  .tanod-launcher {
+    width: 76px;
+    height: 94px;
+  }
+
+  .tanod-stage-3d,
+  .tanod.is-open .tanod-stage-3d {
+    --tanod-scale: 0.56;
+  }
+
+  .tanod.is-open {
+    right: var(--s-2);
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tanod.is-open .tanod-launcher {
+    position: absolute;
+    left: 0;
+    top: -78px;
+    width: 76px;
+    height: 94px;
+  }
+
+  .tanod-panel {
+    width: 100%;
+    height: min(520px, calc(100vh - 200px));
+    margin-bottom: 0;
+  }
+
+  .tanod-teaser {
+    margin-bottom: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tanod-still,
+  .tanod-teaser,
+  .tanod-panel,
+  .tanod-msg,
+  .tanod-chip,
+  .tanod-dots span {
+    animation: none;
+  }
+
+  .tanod-launcher,
+  .tanod-stage-3d,
+  .tanod-link {
+    transition: none;
+  }
+}
+
+@media print {
+  .tanod {
+    display: none;
+  }
+}

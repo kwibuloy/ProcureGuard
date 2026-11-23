@@ -20,7 +20,7 @@ With no real data yet, load and score demonstration contracts from the repo root
 
 | Route                                             | Screen                                                                                                                                                                                                                                                |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                               | Contracts: summary, then the filterable ranked table (award period, new flags only), review marks, "New" badges, CSV export                                                                                                             |
+| `/`                                               | Contracts: summary, then the filterable ranked table (award period, new flags only), review marks, "New" badges, CSV export                                                                                                                           |
 | `/patterns`                                       | Score histogram, main reasons and the map by place. Selecting a bar or a place opens the Contracts list with that filter                                                                                                                              |
 | `/contracts/:id`                                  | Side panel over the queue explaining one contract's score: indicators, price compared with similar contracts, review status and history, the scoring run, links to PhilGEPS and to respond by email; prints as a one-page summary with the disclaimer |
 | `/profile/entity?name=`, `/profile/awardee?name=` | Everything one procuring entity awarded, or one awardee won, with contracts by award month; entities link to a search for their COA audit reports                                                                                                     |
@@ -43,6 +43,16 @@ The pager offers 15, 30, 50 or 100 rows a page (`rows`); 15 is the default. The 
 - **Saved views** keep a named set of filters in this browser. **Compare** in a contract's panel adds it to a tray; two make a side-by-side page.
 - The ring beside the list title shows how many of the run's 50 highest-ranked flags have a review. Reviews are written by signed-in team members and are public.
 - `?` lists the keyboard shortcuts. First-time visitors get a three-step tour; "Take the tour" in the footer replays it.
+
+## Tanod, the helper
+
+Tanod, the barangay tanod mascot, stands in the bottom-left corner of every page; clicking him opens a chat. He sits on the left to stay clear of the contract panel (right), the compare tray and toasts (centre) and the phone back-to-top button (right).
+
+- **Answers** come from `src/tanod/brain.ts`, with no AI service: a question is matched to a written reply by its words, and replies reuse the text in `src/indicators.ts` and `src/glossary.ts`. Data questions become live lookups on the existing API: "how many are flagged" (`/api/overview`), "top flagged contracts" (`/api/contracts`), "explain contract 123" or "why is this contract flagged" with a contract open (`/api/contracts/:id`), and "find contracts in Cebu" (`/api/suggest`). Questions about guilt or corruption get a fixed reply that a flag is not a finding of wrongdoing. He says so when he doesn't understand a question, and offers questions he can answer.
+- **Tests** in `src/tanod/brain.test.ts` check that 37 sample questions reach the right reply, that every suggested question is understood, that lookups build the right sentences and links, and that no reply breaks the wording rules (no accusing words, no "bidders" as a count, no accuracy figure).
+- **The 3D model** is `public/mascot/tanod.glb`, built in Blender (`mascot/README.md`). `src/tanod/TanodStage.tsx` loads it with three.js in its own chunk (about 156 KB gzipped) once the page has settled, so the first view is not slowed. Until then, and without WebGL, `public/mascot/tanod.png` stands in.
+- **Animation** is done in code on the model's pivots: he breathes, sways, blinks and glances around; waves on hover and when the chat opens; and acts out each reply (explaining with open hands, pointing toward the chat, a hand to his chin while looking something up, a shrug, hands on hips for the "not a finding" answers, a hop for thanks). His mouth moves while a reply types out. Under `prefers-reduced-motion` he holds still and replies appear at once.
+- To add a topic, add an entry to `TOPICS` in `brain.ts` and a sample question to the test.
 
 ## Phones
 
