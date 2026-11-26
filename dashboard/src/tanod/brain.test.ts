@@ -3,6 +3,8 @@ import type { ContractDetail, ContractList, Overview } from '../api';
 import {
   allWrittenReplies,
   answer,
+  distance,
+  remember,
   resolve,
   STARTERS,
   type Answer,
@@ -105,7 +107,8 @@ describe('Tanod understands common questions', () => {
     expect(answer('what are the highest scores')).toMatchObject({ lookup: { kind: 'top' } });
     expect(answer('How many contracts are flagged?')).toMatchObject({ lookup: { kind: 'counts' } });
     expect(answer('explain contract 42')).toMatchObject({ lookup: { kind: 'contract', id: 42 } });
-    expect(answer('what about #7')).toMatchObject({ lookup: { kind: 'contract', id: 7 } });
+    // "#7" is a rank: Tanod and the list write ranks with "#", not contract ids.
+    expect(answer('what about #7')).toMatchObject({ lookup: { kind: 'rank', rank: 7 } });
     expect(answer('Find contracts in Cebu')).toMatchObject({
       lookup: { kind: 'search', text: 'cebu' },
     });
@@ -284,7 +287,26 @@ describe('Tanod looks things up', () => {
       'Raised by repeated winner: This awardee won 8 of the 10 bid notices this entity awarded (80%).',
     );
     expect(reply.text[2]).toMatch(/^Raised by few document requests: 1 supplier requested/);
+    // Grouped small-value awards is missing outside Small Value Procurement and read
+    // as "no group", so it is not reported as filled with the typical value.
     expect(reply.text).toHaveLength(4);
+    expect(wordingProblems(sentences(reply))).toEqual([]);
+  });
+
+  it('says which indicators could not be computed', async () => {
+    const noPrice = {
+      ...detail,
+      indicators: detail.indicators.map((i) =>
+        i.indicator === 'price_deviation' ? { ...i, value: null } : i,
+      ),
+    } as ContractDetail;
+    const reply = await resolve(
+      { kind: 'contract', id: 11 },
+      fake({ '/api/contracts/11': noPrice }),
+      null,
+    );
+    expect(reply.text[3]).toMatch(/^Could not be computed here: high award-to-budget ratio\./);
+    expect(reply.text).toHaveLength(5);
     expect(wordingProblems(sentences(reply))).toEqual([]);
   });
 
@@ -309,6 +331,77 @@ describe('Tanod looks things up', () => {
     ]);
   });
 
+  it('opens the contract at a rank, or says the rank is past the end', async () => {
+    const calls: string[] = [];
+    const reply = await resolve(
+      { kind: 'rank', rank: 1 },
+      fake({ '/api/contracts/11': detail, '/api/contracts?': list }, calls),
+      4,
+    );
+    expect(calls).toEqual([
+      '/api/contracts?sort=rank&page=1&pageSize=1&run=4',
+      '/api/contracts/11?run=4',
+    ]);
+    expect(reply.text[0]).toMatch(/^Road concreting \(Town A\) has a score of 91, rank 1/);
+    const past = await resolve(
+      { kind: 'rank', rank: 9999 },
+      fake({ '/api/contracts?': { ...list, items: [] } }),
+      null,
+    );
+    expect(past.text[0]).toBe('There is no rank 9,999 in this scoring run: it ranks 50 contracts.');
+  });
+
+  it('counts the main reasons among flagged contracts', async () => {
+    const reply = await resolve(
+      { kind: 'reasons' },
+      fake({
+        '/api/overview': {
+          ...overview,
+          mainReasons: [
+            { indicator: 'price_deviation', count: 10 },
+            { indicator: 'repeated_winner', count: 30 },
+          ],
+        },
+      }),
+      null,
+    );
+    expect(reply.text[1]).toBe('Repeated winner: 30 flagged contracts (75%).');
+    expect(reply.text[2]).toMatch(/: 10 flagged contracts \(25%\)\.$/);
+    expect(wordingProblems(sentences(reply))).toEqual([]);
+  });
+
+  it('remembers the contracts it listed, so "the second one" opens', async () => {
+    const reply = await resolve({ kind: 'top' }, fake({ '/api/contracts': list }), null);
+    expect(reply.listed).toEqual([
+      { rank: 1, id: 11 },
+      { rank: 2, id: 12 },
+    ]);
+    const memory = remember(reply);
+    expect(answer('explain the second one', { memory })).toMatchObject({
+      lookup: { kind: 'contract', id: 12 },
+    });
+    expect(answer('#1', { memory })).toMatchObject({ lookup: { kind: 'contract', id: 11 } });
+    // Without a list, an ordinal asks which list is meant instead of guessing.
+    const none = answer('the second one');
+    expect('reply' in none && none.reply.text[0]).toMatch(/^Which list do you mean/);
+  });
+
+  it('answers place counts in words, not only in the links', async () => {
+    const suggest = {
+      contracts: [],
+      entities: [],
+      awardees: [],
+      places: [{ name: 'Cebu', kind: 'province', contracts: 900, flagged: 45 }],
+    };
+    const reply = await resolve(
+      { kind: 'search', text: 'cebu' },
+      fake({ '/api/suggest': suggest }),
+      null,
+    );
+    expect(reply.text[1]).toBe('Cebu (province): 45 flagged of 900 contracts screened.');
+    expect(wordingProblems(sentences(reply))).toEqual([]);
+  });
+
   it('says so when nothing matches or the API is down', async () => {
     const empty = { contracts: [], entities: [], awardees: [], places: [] };
     const nothing = await resolve(
@@ -323,5 +416,79 @@ describe('Tanod looks things up', () => {
       throw new Error('Request failed (500)');
     };
     expect((await resolve({ kind: 'top' }, down, null)).text[0]).toMatch(/couldn’t reach the data/);
+  });
+});
+
+describe('Tanod follows a conversation', () => {
+  it('reads common misspellings, but not real words as typos', () => {
+    expect(distance('indicaters', 'indicators')).toBe(1);
+    expect(distance('spliting', 'splitting')).toBe(1);
+    expect(distance('teh', 'the')).toBe(1);
+    expect(topicOf(answer('what are the indicaters'))).toBe('indicators');
+    expect(topicOf(answer('explain contract spliting'))).toBe('contract_splitting');
+    expect(topicOf(answer('who is corupt'))).toBe('accuse');
+    // "steel" is a construction material, not a misspelled accusation.
+    expect(topicOf(answer('steel prices'))).toBe('price_deviation');
+    expect(topicOf(answer('How do I compare contracts?'))).toBe('compare');
+  });
+
+  it('says more about the topic it just explained', () => {
+    const memory = remember(allWrittenReplies().find((t) => t.id === 'price_deviation')!.reply);
+    const more = answer('tell me more', { memory });
+    expect('reply' in more && more.reply.topic).toBe('price_deviation');
+    expect('reply' in more && more.reply.text[0]).toMatch(/^Comparable contracts share a region/);
+    const why = answer('why?', { memory: { topic: 'single_requester' } });
+    expect('reply' in why && why.reply.text[0]).toMatch(/^Counts exist only for Public Bidding/);
+    const nothing = answer('tell me more', { memory: { topic: 'compare' } });
+    expect('reply' in nothing && nothing.reply.text[0]).toMatch(/^That’s all I have/);
+  });
+
+  it('keeps every "tell me more" within the wording rules', () => {
+    for (const { id } of allWrittenReplies()) {
+      const result = answer('tell me more', { memory: { topic: id } });
+      if ('reply' in result) expect(wordingProblems(sentences(result.reply))).toEqual([]);
+    }
+  });
+
+  it('answers two questions asked as one', () => {
+    const both = answer('what is a flag and how is the score calculated');
+    expect('reply' in both && both.reply.text[0]).toMatch(/statistically unusual/);
+    expect('reply' in both && both.reply.topic).toBe('score');
+    expect('reply' in both && both.reply.text.length).toBeGreaterThan(3);
+  });
+
+  it('keeps the last topic and list through a lookup', () => {
+    const first = remember({ mood: 'explain', text: [], topic: 'model' });
+    const after = remember({ mood: 'point', text: [], listed: [{ rank: 1, id: 7 }] }, first);
+    expect(after).toEqual({ topic: 'model', listed: [{ rank: 1, id: 7 }] });
+  });
+
+  it.each([
+    ['how many contracts are in Cebu', { kind: 'search', text: 'cebu' }],
+    ['show me flagged contracts in Davao', { kind: 'search', text: 'davao' }],
+    ['how many flagged in this run', { kind: 'counts' }],
+    ['what is the most common reason for a flag', { kind: 'reasons' }],
+    ['ilan ang flagged', { kind: 'counts' }],
+    ['contract #12', { kind: 'rank', rank: 12 }],
+    ['/contracts/88', { kind: 'contract', id: 88 }],
+  ])('“%s” is a lookup', (question, lookup) => {
+    expect(answer(question)).toMatchObject({ lookup });
+  });
+
+  it.each([
+    ['do other algorithms agree', 'agreement'],
+    ['what is ECOD', 'agreement'],
+    ['is the ranking stable', 'agreement'],
+    ['what if a value is missing', 'missing'],
+    ['what is a procuring entity', 'terms'],
+    ['which entity has the most flags', 'most_flags'],
+    ['how do i read the chart', 'charts'],
+    ['whats new', 'new'],
+    ['paano gamitin ito', 'howto'],
+    ['ok', 'smalltalk'],
+    ['what is the first indicator', 'indicators'],
+    ['what does main reason mean', 'shap'],
+  ])('“%s” → %s', (question, topic) => {
+    expect(topicOf(answer(question))).toBe(topic);
   });
 });

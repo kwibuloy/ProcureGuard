@@ -16,7 +16,17 @@ import {
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRuns } from '../run';
-import { answer, resolve, STARTERS, type Fetcher, type Link, type Mood, type Reply } from './brain';
+import {
+  answer,
+  remember,
+  resolve,
+  STARTERS,
+  type Fetcher,
+  type Link,
+  type Memory,
+  type Mood,
+  type Reply,
+} from './brain';
 import type { StageState } from './TanodStage';
 
 const TanodStage = lazy(() => import('./TanodStage'));
@@ -90,6 +100,9 @@ export function TanodChat() {
   const input = useRef<HTMLInputElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const moodTimer = useRef<number | undefined>(undefined);
+  // What Tanod said last, so "tell me more" and "the second one" make sense.
+  // Listed ranks belong to one scoring run, so memory is kept per run.
+  const memory = useRef<{ run: number | null; memory: Memory }>({ run: null, memory: {} });
   const { selected } = useRuns();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -138,6 +151,10 @@ export function TanodChat() {
 
   const say = useCallback(
     (reply: Reply) => {
+      memory.current = {
+        run: memory.current.run,
+        memory: remember(reply, memory.current.memory),
+      };
       const id = nextId.current++;
       setMessages((all) => [...all, { id, from: 'tanod', ...reply }]);
       const length = reply.text.join(' ').length;
@@ -195,16 +212,22 @@ export function TanodChat() {
     setDraft('');
     setTyping(null);
     setMessages((all) => [...all, { id: nextId.current++, from: 'you', text: [text] }]);
-    const result = answer(text, { contractId: openContract(pathname) });
+    if (memory.current.run !== selected) memory.current = { run: selected, memory: {} };
+    const result = answer(text, {
+      contractId: openContract(pathname),
+      memory: memory.current.memory,
+    });
     if ('reply' in result) {
       say(result.reply);
       return;
     }
     setBusy(true);
     act('think');
-    const reply = await resolve(result.lookup, fetchJson, selected);
+    const run = selected;
+    const reply = await resolve(result.lookup, fetchJson, run);
     setBusy(false);
-    say(reply);
+    // Ranks in a reply for a run the reader has since left would point at the wrong contracts.
+    say(run === memory.current.run ? reply : { ...reply, listed: undefined });
   }
 
   function submit(event: FormEvent) {
