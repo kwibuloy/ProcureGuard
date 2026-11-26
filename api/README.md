@@ -48,6 +48,16 @@ Each takes an optional `run` (a scoring run id) and otherwise serves the latest 
 
 Measured with `EXPLAIN ANALYZE` on run 24 (90,204 contracts, 16 runs stored), local Docker PostgreSQL 17, page 1 of 25 rows, median of three, after migration 006 (a covering index for each contract's main reason): flagged list 368 ms, grouped flagged list 421 ms, search "imus road" 142 ms, typo search "imuz" 300 ms, main-reason filter 449 ms. Without that index the same queries took 566, 586, 378, 533 and 619 ms. "All screened" (every contract, no filter) stays at about 1 s (1,015 ms ungrouped, 1,034 ms grouped): that time is the window functions sorting all 90,204 wide rows, which spills to disk at PostgreSQL's default `work_mem`, and an index cannot remove it. Narrowing the inner query to ids before joining the other columns would; not done yet.
 
+### NFR-02: ranked list within 3 seconds for 95% of requests
+
+```
+npm run time:list -- [base URL, default http://127.0.0.1:3001] [requests, default 100]
+```
+
+`src/tools/time-ranked-list.ts` sends the list requests the review queue makes (25 rows a page: flagged contracts by rank, later pages, the amount and recent sorts, main-reason and score filters, a search, and the all-screened list), one at a time and spaced under the list rate limit, and times each until the whole body is read. It exits with code 1 when fewer than 95% finish within 3 seconds or any request fails.
+
+Measured on 26 November 2026, local API against local Docker PostgreSQL, scoring run 27 (90,204 contracts): 100 requests, 0 failed, median 505 ms, 95th percentile 1,140 ms, slowest 1,642 ms, 100 of 100 within 3 seconds. NFR-02 is met locally. The deployed site (Vercel `sin1` and Neon) was not measured; pass its URL to measure it there.
+
 ## Checks
 
 ```

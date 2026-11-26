@@ -26,7 +26,7 @@ class IsolationForestModel:
 
 
 class ECODModel:
-    """Empirical cumulative distribution outlier detection (Li et al., 2022), one-sided.
+    """Empirical cumulative distribution outlier detection (Li et al., 2023), one-sided.
 
     For each indicator, the tail probability P(X >= x) is read from that
     indicator's empirical distribution over all contracts, and the score is the

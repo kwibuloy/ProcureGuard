@@ -22,7 +22,7 @@ Chapters 3 and 4 are drafted in the team's Word file; the PDF above is the appro
 
 `docs/data-source.md` records what the PhilGEPS portal actually provides: file locations, which quarters are public, columns, data quirks, and the document request count. Read it before touching `pipeline/`.
 
-Two findings there contradict the paper and still need the adviser's agreement: the data has no bidder count, and the 2023 and 2025 files are not publicly downloadable.
+Two findings there differ from the original paper, and the adviser has agreed to both: the data has no bidder count (so the document request count is used as a proxy), and the 2023 and 2025 files are not publicly downloadable (so the study uses 2024 only).
 
 ## Rules that apply everywhere
 
@@ -67,7 +67,7 @@ tests/e2e/      one dataset through every layer
 .claude/        agents, skills, hooks
 ```
 
-All four layers are built. The database holds the real 2024 contracts (90,247) and document request counts for all 80,422 public bidding notices (`data/notices/bid_notices_2024.csv`), scored with four indicators. The deployed API runs in Vercel's `sin1` region, next to the Neon database. Each layer's `README.md` holds its setup and run commands; the skills read those. `tests/e2e/` runs one small dataset through every layer.
+All four layers are built. The database holds the real 2024 contracts (90,204) and document request counts for all 80,422 public bidding notices (`data/notices/bid_notices_2024.csv`), scored with four indicators. The deployed API runs in Vercel's `sin1` region, next to the Neon database. Each layer's `README.md` holds its setup and run commands; the skills read those. `tests/e2e/` runs one small dataset through every layer.
 
 ## Open decisions
 
@@ -75,7 +75,7 @@ Not settled. Ask the user; do not pick one.
 
 - **Study defaults in `ml/settings.py`** (comparable contracts, budget bands, share flagged, smallest entity for repeated winner). Claude chose them as defaults and listed the reasons in `ml/README.md`; the team has not confirmed them.
 
-When one is decided, move it out of this list into the relevant README. Decided: Isolation Forest is the only model; the clustering model was removed in November 2026, and contract splitting was added as a fourth indicator (`ml/README.md`). Decisions already made for the pipeline (2024 only, scrape Public Bidding civil works only) are in `pipeline/README.md`.
+When one is decided, move it out of this list into the relevant README. Decided: Isolation Forest is the only model whose scores are stored and shown; the clustering model was removed in November 2026, and contract splitting was added as a fourth indicator (`ml/README.md`). ECOD (`ml/compare_models.py`) is fitted only as a comparison check of how much the flags depend on the algorithm; its scores are never stored. Decisions already made for the pipeline (2024 only, scrape Public Bidding civil works only) are in `pipeline/README.md`.
 
 ## Sub-agents
 
