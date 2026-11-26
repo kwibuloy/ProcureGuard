@@ -66,15 +66,22 @@ export async function overview(db: Db, runId: number) {
 }
 
 // Fields a reviewer or an indicator depends on, in the order the page shows them.
+// The third value completes "needed for ...". Procuring entity and awardee, which
+// repeated winner and grouped small-value awards also need, are required when a
+// contract is loaded, so they are never missing and are not listed.
 const QUALITY_FIELDS = [
   ['contract_amount', 'Contract amount', 'High award-to-budget ratio'],
-  ['approved_budget', 'Approved budget', 'High award-to-budget ratio'],
+  [
+    'approved_budget',
+    'Approved budget',
+    'High award-to-budget ratio and grouped small-value awards',
+  ],
   ['region', 'Region', 'Comparable contracts'],
   ['bid_reference_no', 'Bid notice reference', 'Few document requests'],
-  ['procurement_mode', 'Procurement mode', 'Few document requests'],
+  ['procurement_mode', 'Procurement mode', 'Few document requests and grouped small-value awards'],
+  ['award_date', 'Award date', 'Grouped small-value awards and the timeline'],
   ['published_date', 'Notice published date', 'Timeline'],
   ['closing_date', 'Bidding closing date', 'Timeline'],
-  ['award_date', 'Award date', 'Timeline'],
   ['notice_to_proceed_date', 'Notice to proceed date', 'Timeline'],
 ] as const;
 

@@ -1,8 +1,28 @@
 # Usability test kit
 
-A short, repeatable test of the dashboard with its intended users (Chapter 1, page 6: reviewers in oversight bodies, journalists and researchers, and procuring entities checking a flag about them). It supports the user evaluation alongside `User evaluation kit.docx`. Nothing here measures accuracy: the study is unsupervised, so the test measures whether people can find, understand and act on a flag.
+A short, repeatable test of the dashboard with its intended users (paper Section 1.6: reviewers in oversight bodies, journalists and researchers, and procuring entities checking a flag about them). It supports the user evaluation alongside `User evaluation kit.docx`. Nothing here measures accuracy: the study is unsupervised, so the test measures whether people can find, understand and act on a flag.
 
-## Setup
+## Part A: first-time user evaluation (NFR-01, paper Section 3.13)
+
+Run this part first, exactly as written, because it is the test the paper reports for H2 and NFR-01. Part B below is a broader usability test and does not replace it.
+
+- **Participants:** at least 5 people from outside the project who have never used the dashboard.
+- **Contracts:** a fixed set of flagged contracts chosen in advance from the top-ranked flagged contracts of the latest scoring run, the same set and order for every participant. Write down each contract's main reason, the indicator with the largest SHAP contribution, before the sessions.
+- **Do not show the first-visit tour.** Open each contract directly by its address (`/contracts/<id>`).
+
+Steps, for every participant:
+
+1. Read aloud the "A flag is" and "A flag is not" text from the About page ("How ProcureGuard works" section), word for word.
+2. Open the first contract from the set. The participant has not seen it before.
+3. Ask: "Which indicator contributed most to this flag, and why?" Start the timer when the contract opens and stop it when they name an indicator.
+4. Repeat steps 2 and 3 for every contract in the set.
+5. Ask the participant to say in their own words why the contract was flagged. Write the answer down; it is not scored.
+
+**Scoring:** an answer is correct when it names the indicator with the largest SHAP contribution. Record each answer and its time in seconds. **NFR-01 is met when at least 4 of the 5 participants answer correctly within 60 seconds.** With five participants this is a pilot: report it as whether first-time users can read the explanations, not as a result for all users.
+
+## Part B: usability tasks
+
+### Setup
 
 - **Participants:** 3 to 5 per user group. Five people find most of the usability problems a design has.
 - **Data:** the deployed site or a local run on the real 2024 data, on the latest scoring run.
@@ -11,13 +31,13 @@ A short, repeatable test of the dashboard with its intended users (Chapter 1, pa
 - **Roles:** one facilitator reads the script and stays neutral; one note-taker records time, errors and quotes.
 - **Consent:** participants agree to take part and to anonymous notes. No screen recording without written consent.
 
-## Script
+### Script
 
 Read aloud:
 
 > Thank you for helping. We are testing the website, not you, so nothing you do is wrong. Please think aloud as you go: say what you are looking for and what you expect to happen. I cannot help during the tasks, but I will answer questions at the end.
 
-## Tasks
+### Tasks
 
 Give one task at a time, on a card. Start the timer when the participant finishes reading it. A task fails if it is abandoned or takes longer than its limit.
 
@@ -32,7 +52,7 @@ Give one task at a time, on a card. Start the timer when the participant finishe
 | 7 | Download the contracts from task 3 as a spreadsheet. | Starts the CSV export | 1 min |
 | 8 | You represent a procuring entity. Find out how to respond to a flag about one of your contracts. | Finds "Respond to this flag" or the About page answer | 2 min |
 
-## What to record per task
+### What to record per task
 
 - Completed: yes, with help, or no
 - Time on task, in seconds
@@ -40,7 +60,7 @@ Give one task at a time, on a card. Start the timer when the participant finishe
 - Words used for a flag. Note any accusatory wording ("corrupt", "fraud", "caught"), because it shows where the screen implied more than it should.
 - Quotes, positive and negative
 
-## System Usability Scale (SUS)
+### System Usability Scale (SUS)
 
 Hand this out after the tasks. Participants answer each statement from 1 (strongly disagree) to 5 (strongly agree).
 
@@ -57,12 +77,12 @@ Hand this out after the tasks. Participants answer each statement from 1 (strong
 
 **Scoring:** for odd items, subtract 1 from the answer. For even items, subtract the answer from 5. Add the ten results and multiply by 2.5, which gives a score from 0 to 100. Around 68 is average; above 80 is good. Report the mean and the range per user group, and do not present SUS as a percentage.
 
-## Closing questions
+### Closing questions
 
 1. What was the most confusing moment?
 2. Did anything on the site make a contract or a person look guilty? Where?
 3. What would you need before you could use this in your work?
 
-## Reporting
+### Reporting
 
-For each task, give the completion rate, the median time and the common errors. Then give SUS per group and the three most frequent problems, each with a proposed fix. Record results as measured; if a session was cut short or a task was skipped, say so.
+For Part A, give each participant's answers and times and whether NFR-01 was met. For Part B, for each task, give the completion rate, the median time and the common errors. Then give SUS per group and the three most frequent problems, each with a proposed fix. Record results as measured; if a session was cut short or a task was skipped, say so.

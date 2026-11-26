@@ -4,12 +4,12 @@ The chatbot mascot from the "Barangay Tanod" turnaround sheet, built in Blender
 by a script so it can be rebuilt and adjusted. The dashboard loads the exported
 GLB; this folder is not part of the dashboard build.
 
-| File | What it is |
-|---|---|
-| `turnaround.webp` | The character sheet. The script measures it and carves the hair from it. |
-| `build_tanod.py` | Builds the model in Blender, renders comparisons, exports. |
-| `tanod.blend` | The built scene with cel-shaded materials, for viewing or hand edits in Blender. |
-| `../public/mascot/tanod.glb` | The export the app loads (about 1.5 MB, about 0.95 MB gzipped). |
+| File                         | What it is                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `turnaround.webp`            | The character sheet. The script measures it and carves the hair from it.         |
+| `build_tanod.py`             | Builds the model in Blender, renders comparisons, exports.                       |
+| `tanod.blend`                | The built scene with cel-shaded materials, for viewing or hand edits in Blender. |
+| `../public/mascot/tanod.glb` | The export the app loads (about 1.5 MB, about 0.95 MB gzipped).                  |
 
 ## Rebuild
 
@@ -53,18 +53,18 @@ Hand edits made in `tanod.blend` are lost on the next rebuild. Put lasting chang
 In glTF/three.js terms the character faces +Z, its left is +X, and up is +Y.
 Animate the pivot nodes, not the meshes.
 
-| Node | Pivot | Use |
-|---|---|---|
-| `tanod` | ground | root: place, scale or turn the whole mascot |
-| `hips` | hips (y 0.40) | `position.y` to bob or hop |
-| `torso` | waist | lean, twist |
-| `head` | neck (y 0.97) | nod, tilt, turn |
-| `armL`, `armR` | shoulders | rest pose `rotation.z = ±0.30` (sleeves flare out); raise to wave |
-| `forearmL`, `forearmR` | elbows | rest pose `rotation.z = ∓0.10` (forearm hangs straighter); bend for gestures |
-| `legL`, `legR` | hip joints | `rotation.x` to walk |
-| `eyeL`, `eyeR` | eye centres | `scale.y` toward 0.1 to blink (scale is 1 at rest) |
-| `mouth` | mouth | hidden on the sheet. Its node carries `extras.startHidden = true`; hide it after loading and show it while talking |
-| `hair` | (child of head) | follows the head |
-| `groundShadow` | floor | flat disc; scale it with hops |
+| Node                   | Pivot           | Use                                                                                                                |
+| ---------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `tanod`                | ground          | root: place, scale or turn the whole mascot                                                                        |
+| `hips`                 | hips (y 0.40)   | `position.y` to bob or hop                                                                                         |
+| `torso`                | waist           | lean, twist                                                                                                        |
+| `head`                 | neck (y 0.97)   | nod, tilt, turn                                                                                                    |
+| `armL`, `armR`         | shoulders       | rest pose `rotation.z = ±0.30` (sleeves flare out); raise to wave                                                  |
+| `forearmL`, `forearmR` | elbows          | rest pose `rotation.z = ∓0.10` (forearm hangs straighter); bend for gestures                                       |
+| `legL`, `legR`         | hip joints      | `rotation.x` to walk                                                                                               |
+| `eyeL`, `eyeR`         | eye centres     | `scale.y` toward 0.1 to blink (scale is 1 at rest)                                                                 |
+| `mouth`                | mouth           | hidden on the sheet. Its node carries `extras.startHidden = true`; hide it after loading and show it while talking |
+| `hair`                 | (child of head) | follows the head                                                                                                   |
+| `groundShadow`         | floor           | flat disc; scale it with hops                                                                                      |
 
 Outline meshes are named `<part>_outline` and are children of their part, so they move with it.

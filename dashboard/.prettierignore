@@ -1,0 +1,5 @@
+# Generated map boundaries (faeldon/philippines-json-maps), kept as published.
+public/maps/
+# Build output and dependencies.
+dist/
+node_modules/

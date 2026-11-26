@@ -10,6 +10,18 @@ interface RunState {
 }
 
 const RunContext = createContext<RunState>({ runs: [], selected: null, select: () => {} });
+
+/** The study's model; the API opens on its latest run (api/src/queries/runs.ts). */
+const PRIMARY_MODEL = 'Isolation Forest';
+
+/**
+ * The current run: the latest run of the study's model, or the latest run of any
+ * model when there is none, the same rule the API uses when no run is asked for.
+ * `runs` is newest first. Every other run is superseded, kept only for the record.
+ */
+export function currentRunId(runs: Pick<Run, 'id' | 'modelName'>[]): number | null {
+  return (runs.find((run) => run.modelName === PRIMARY_MODEL) ?? runs[0])?.id ?? null;
+}
 const STORAGE_KEY = 'procureguard-run';
 
 function remembered(): number | null {

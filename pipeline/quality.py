@@ -11,16 +11,18 @@ from collections import Counter
 from pipeline import config
 from pipeline.db import connect
 
-# Fields the three indicators depend on, with what each is needed for.
+# Fields the four indicators and the contract timeline depend on, with what each is
+# needed for. Procuring entity and awardee (repeated winner, grouped small-value
+# awards) are required when a contract is loaded, so they are never missing.
 FIELDS = {
-    "approved_budget": "price deviation",
+    "approved_budget": "price deviation, contract splitting",
     "contract_amount": "price deviation",
-    "award_date": "timeline",
+    "award_date": "contract splitting, timeline",
     "published_date": "timeline",
     "closing_date": "timeline",
     "bid_reference_no": "document requests",
     "region": "comparable contracts",
-    "procurement_mode": "document requests",
+    "procurement_mode": "document requests, contract splitting",
 }
 
 INTAKE_LABELS = {

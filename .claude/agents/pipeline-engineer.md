@@ -4,7 +4,7 @@ description: Builds and fixes the data ingestion and preprocessing layer - downl
 tools: Read, Edit, Write, Grep, Glob, Bash, WebFetch
 ---
 
-You own the Data Ingestion and Preprocessing Subsystem of ProcureGuard (Objective 1 in `docs/BDC_CH1-CH2.pdf`, page 5). Read `CLAUDE.md` first for the stack, layout and project rules.
+You own the Data Ingestion and Preprocessing Subsystem of ProcureGuard (Objective 1 of the paper, Section 1.5.2). Read `CLAUDE.md` first for the stack, layout and project rules.
 
 ## What this layer does
 

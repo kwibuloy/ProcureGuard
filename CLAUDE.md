@@ -6,19 +6,22 @@ This file points to where things are. It is not documentation; keep it under 200
 
 ## Source of truth
 
-`docs/BDC_CH1-CH2.pdf` is the approved manuscript (Chapters 1 and 2). When code and paper disagree, raise it with the user; do not quietly follow either one.
+There is no approved manuscript file in the repository. The paper is kept in the team's Word files outside it; ask the user for the current version when you need its exact wording. When code and paper disagree, raise it with the user; do not quietly follow either one.
 
-| Need | Pages |
+Where to look in the paper (sections of the Software Engineering paper):
+
+| Need | Section |
 |---|---|
-| What the system is, the three layers | 2-3 |
-| Problems and hypotheses (H1, H2) | 3-4 |
-| Objectives 1-7 | 5 |
-| Who the users are | 6 |
-| Scope and limitations | 7 |
-| PCC red-flag patterns, GPPB procedural rules | 10-11 |
-| References and source URLs | 22-24 |
+| What the system is, the three layers | 1.2 |
+| Problems and hypotheses (H1, H2) | 1.3, 1.4 |
+| Objectives 1-7 | 1.5.2 |
+| Who the users are | 1.6 |
+| Scope and limitations | 1.7 |
+| PCC red-flag patterns, GPPB procedural rules | Chapter 2, local literature |
+| Indicators, model, SHAP, robustness | 3.7 to 3.10 |
+| Testing and validation, NFR-01 and NFR-02 | 3.12, 3.13 |
 
-Chapters 3 and 4 are drafted in the team's Word file; the PDF above is the approved Chapters 1-2.
+The Algorithms and Complexity paper is for a separate course. It reuses ProcureGuard to discuss Isolation Forest, ECOD and exact Shapley values, and does not need to match the Software Engineering paper section by section.
 
 `docs/data-source.md` records what the PhilGEPS portal actually provides: file locations, which quarters are public, columns, data quirks, and the document request count. Read it before touching `pipeline/`.
 

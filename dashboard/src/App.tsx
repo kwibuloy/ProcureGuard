@@ -22,7 +22,7 @@ import type { OverviewContext } from './overview';
 import { ContractPanel } from './pages/ContractPanel';
 import { QueuePage } from './pages/QueuePage';
 import { ReviewerProvider, useReviewer } from './reviews';
-import { RunProvider, useRuns } from './run';
+import { currentRunId, RunProvider, useRuns } from './run';
 import { TanodChat } from './tanod/TanodChat';
 
 // The Contracts page loads first; the others load when they are opened.
@@ -119,6 +119,7 @@ function ThemeToggle() {
 function RunPicker({ shownId }: { shownId: number | null }) {
   const { runs, select } = useRuns();
   if (runs.length < 2 || shownId === null) return null;
+  const current = currentRunId(runs);
   return (
     <label className="run-picker">
       <span>Scoring run</span>
@@ -126,6 +127,7 @@ function RunPicker({ shownId }: { shownId: number | null }) {
         {runs.map((run) => (
           <option key={run.id} value={run.id}>
             {run.modelName} · {formatDate(run.createdAt)} · run {run.id}
+            {run.id === current ? ' · current' : ' · superseded'}
           </option>
         ))}
       </select>
@@ -176,7 +178,8 @@ function ReviewerChip() {
 }
 
 function Layout() {
-  const { selected } = useRuns();
+  const { selected, runs, select } = useRuns();
+  const current = currentRunId(runs);
   const overview = useApi<Overview>(withRun('/api/overview', selected));
   const run = overview.data?.run ?? null;
   const { pathname } = useLocation();
@@ -220,6 +223,22 @@ function Layout() {
             <p>
               <strong>Demonstration data.</strong> Every organization and contract shown here is
               generated. Nothing on this page describes a real contract.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {run && current !== null && run.id !== current && (
+        <div className="demo-banner" role="note">
+          <div className="demo-banner-inner">
+            <Icon name="info" />
+            <p>
+              <strong>Superseded scoring run.</strong> You are viewing run {run.id} from{' '}
+              {formatDate(run.createdAt)}, kept for the record. Its settings, indicators and figures
+              can differ from the current run.{' '}
+              <button type="button" className="text-button" onClick={() => select(current)}>
+                Show the current run
+              </button>
             </p>
           </div>
         </div>

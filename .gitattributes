@@ -1,0 +1,13 @@
+# Text files are stored and checked out with LF line endings on every machine,
+# so Prettier, Ruff and git agree regardless of core.autocrlf on Windows.
+* text=auto eol=lf
+
+# Binary files: never convert line endings or diff as text.
+*.png binary
+*.jpg binary
+*.webp binary
+*.glb binary
+*.blend binary
+*.pdf binary
+*.docx binary
+*.zip binary
