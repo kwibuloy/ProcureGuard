@@ -1,0 +1,35 @@
+# Exact versions the 2024 scoring runs were made with (Python 3.12).
+# Install this file, not requirements.txt, to reproduce the stored scores exactly:
+#   .venv\Scripts\python -m pip install -r requirements-lock.txt
+# requirements.txt lists the direct dependencies with minimum versions;
+# regenerate this file with pip freeze after changing them.
+
+certifi==2026.10.23
+charset-normalizer==3.5.2
+cloudpickle==3.1.2
+colorama==0.4.6
+idna==3.20
+iniconfig==2.3.1
+joblib==1.6.0
+narwhals==2.28.0
+numpy==2.5.4
+packaging==26.3
+pandas==3.1.1
+pluggy==1.7.0
+psycopg==3.3.8
+psycopg-binary==3.3.8
+Pygments==2.21.0
+pytest==9.2.0
+python-dateutil==4.0.0
+python-dotenv==1.2.4
+requests==2.34.2
+ruff==0.17.4
+scikit-learn==1.9.1
+scipy==1.18.1
+shap==0.54.1
+slicer==0.0.8
+threadpoolctl==3.8.0
+tqdm==4.70.1
+typing_extensions==4.16.0
+tzdata==2026.6
+urllib3==2.8.0
