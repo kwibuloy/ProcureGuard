@@ -18,6 +18,7 @@ Robustness checks (read the database, write only to `data/processed/`, never cha
 |---|---|---|
 | Sensitivity to the study defaults | `python -m ml.sensitivity` | `data/processed/sensitivity_isolation-forest.csv` and `.json` |
 | Isolation Forest seed stability | `python -m ml.stability` | `data/processed/seed_stability.csv` and `.json` |
+| Agreement with a second algorithm (ECOD) | `python -m ml.compare_models` | `data/processed/model_comparison.csv` and `.json` |
 
 ## What is stored
 
@@ -55,7 +56,7 @@ A value that cannot be computed is stored as missing with the reason in `context
 
 ## The model
 
-**Isolation Forest** scores a contract by how few random splits isolate it. It is fitted on all contracts and scaled linearly to 0 to 1.
+**Isolation Forest** scores a contract by how few random splits isolate it. It is fitted on all contracts and scaled linearly to 0 to 1. It is the only model whose scores are stored. ECOD (`ml/models.py`) is fitted only to check how much the flagged set depends on the algorithm (below).
 
 A clustering model (k-means distance to the nearest large cluster) was scored alongside it for comparison until November 2026, when the team removed it; migration 007 deleted its stored runs. Reasons: on the 2024 data it flagged 4,512 of 4,513 contracts mainly for price, so it reduced to one indicator, and its results depended on choices that are hard to defend (number of clusters, scaling, what counts as a large cluster).
 
@@ -116,6 +117,20 @@ Seed stability, Isolation Forest, 10 seeds (26 s). Default seed 2024 against the
 | Spearman | 0.987 | 0.992 | 0.995 |
 
 The overall ranking hardly depends on the seed, and about nine in ten flags stay whichever seed is used; the top 100 is steadier than with three indicators (mean overlap 0.85, was 0.78). The difference between rank 40 and rank 140 still should not be read as meaningful.
+
+### Agreement with ECOD (26 November 2026)
+
+`ml/compare_models.py` fits ECOD (empirical cumulative distribution outlier detection, Li et al. 2022) on the same four model inputs and compares its ranking with the Isolation Forest's, using the measures above. ECOD scores a contract by how far into the upper tail of each indicator's distribution it sits (the sum over indicators of -log P(X >= x)). It has no settings to tune and no random seed, which is why it was chosen as the reference: the clustering model was removed because its results depended on choices that were hard to defend. Only the upper tail is used, because every model input is oriented so that higher is toward the red-flag pattern; the published ECOD also scores the lower tail. ECOD is a comparison only: its scores are never stored and the dashboard shows the Isolation Forest.
+
+Measured on the 2024 data (90,204 contracts, default settings, 5 s):
+
+| Flagged (IF / ECOD) | Shared | Flagged Jaccard | Default flags kept | Top 100 | Top 500 | Spearman |
+|---|---|---|---|---|---|---|
+| 4,511 / 4,516 | 3,406 | 0.606 | 0.755 | 0.90 | 0.712 | 0.864 |
+
+Main reason among ECOD's flagged contracts (largest tail score): repeated winner 1,953, grouped small-value awards 1,349, high award-to-budget ratio 1,214, few document requests 0.
+
+The two algorithms agree on the very top (90 of the top 100) and on three quarters of the flags. They disagree in the middle of the flagged set, for a reason that follows from how each one works: ECOD scores each indicator on its own, so a 100% repeated-winner share counts as far out in the tail even when many contracts share it, while the Isolation Forest treats a value shared by many contracts as ordinary (see "A property to know about"). A flag that both models raise depends less on the choice of algorithm; agreement is not evidence that a flag is right.
 
 ## Controlled anomaly test
 

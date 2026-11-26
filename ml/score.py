@@ -18,7 +18,7 @@ import pandas as pd
 from ml.data import load_contracts
 from ml.explain import contributions
 from ml.indicators import compute, model_features
-from ml.models import MODELS, ScaledModel
+from ml.models import ALL_MODELS, ScaledModel
 from ml.settings import INDICATORS, Settings
 from pipeline.db import connect
 
@@ -55,7 +55,7 @@ def rank_and_flag(scores: np.ndarray, flag_share: float) -> tuple[np.ndarray, np
 def fit_scores(features: pd.DataFrame, model_key: str, settings: Settings):
     """The fitted, 0-to-1 scaled model and its score for every contract."""
     matrix = features[list(INDICATORS)].to_numpy(dtype=float)
-    model = ScaledModel(MODELS[model_key](settings), matrix)
+    model = ScaledModel(ALL_MODELS[model_key](settings), matrix)
     return model, matrix, model.score(matrix)
 
 

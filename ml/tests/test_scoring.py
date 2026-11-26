@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ml.models import MODELS
+from ml.models import ALL_MODELS
 from ml.score import score_contracts
 from ml.settings import INDICATORS, Settings
 
@@ -24,7 +24,7 @@ def features(rows: int = 120) -> pd.DataFrame:
     return frame[list(INDICATORS)]
 
 
-@pytest.mark.parametrize("model", list(MODELS))
+@pytest.mark.parametrize("model", list(ALL_MODELS))
 def test_the_extreme_contract_ranks_first(model):
     result = score_contracts(features(), model, SETTINGS)
 
@@ -33,7 +33,7 @@ def test_the_extreme_contract_ranks_first(model):
     assert result.flagged[0]
 
 
-@pytest.mark.parametrize("model", list(MODELS))
+@pytest.mark.parametrize("model", list(ALL_MODELS))
 def test_scores_run_from_zero_to_one(model):
     result = score_contracts(features(), model, SETTINGS)
 
@@ -42,7 +42,7 @@ def test_scores_run_from_zero_to_one(model):
     assert sorted(result.ranks) == list(range(1, 121))
 
 
-@pytest.mark.parametrize("model", list(MODELS))
+@pytest.mark.parametrize("model", list(ALL_MODELS))
 def test_contributions_add_up_to_each_score(model):
     result = score_contracts(features(), model, SETTINGS)
 
@@ -51,7 +51,7 @@ def test_contributions_add_up_to_each_score(model):
     assert result.contributions.shape == (120, 4)
 
 
-@pytest.mark.parametrize("model", list(MODELS))
+@pytest.mark.parametrize("model", list(ALL_MODELS))
 def test_the_share_flagged_follows_the_setting(model):
     result = score_contracts(features(), model, SETTINGS)
 
@@ -60,7 +60,7 @@ def test_the_share_flagged_follows_the_setting(model):
     assert (result.scores[~result.flagged] < result.threshold).all()
 
 
-@pytest.mark.parametrize("model", list(MODELS))
+@pytest.mark.parametrize("model", list(ALL_MODELS))
 def test_same_seed_gives_the_same_scores(model):
     first = score_contracts(features(), model, SETTINGS)
     second = score_contracts(features(), model, SETTINGS)
