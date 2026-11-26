@@ -97,9 +97,26 @@ async function getJson<T>(path: string, signal: AbortSignal): Promise<T> {
 
 /** The latest review status of each contract shown. */
 export function useReviewStatuses(ids: number[]): ReadonlyMap<number, ReviewStatus> {
+  return useReviewStatusState(ids).statuses;
+}
+
+/**
+ * The review status of each contract, and whether it has arrived for these ids.
+ * Until it has (or when it failed), `ready` is false: a missing mark then means
+ * "not known yet", not "not reviewed".
+ */
+export function useReviewStatusState(ids: number[]): {
+  statuses: ReadonlyMap<number, ReviewStatus>;
+  ready: boolean;
+} {
   const changed = useReviewsVersion();
   const key = ids.slice(0, 200).join(',');
-  const [statuses, setStatuses] = useState<ReadonlyMap<number, ReviewStatus>>(new Map());
+  // Statuses are kept with the ids they belong to, so a new list never shows the
+  // marks of the previous one while its own are loading.
+  const [state, setState] = useState<{ key: string; statuses: ReadonlyMap<number, ReviewStatus> }>({
+    key: '',
+    statuses: new Map(),
+  });
   useEffect(() => {
     if (!key) return;
     const controller = new AbortController();
@@ -109,7 +126,10 @@ export function useReviewStatuses(ids: number[]): ReadonlyMap<number, ReviewStat
     )
       .then(({ statuses: found }) => {
         if (!controller.signal.aborted) {
-          setStatuses(new Map(Object.entries(found).map(([id, status]) => [Number(id), status])));
+          setState({
+            key,
+            statuses: new Map(Object.entries(found).map(([id, status]) => [Number(id), status])),
+          });
         }
       })
       .catch(() => {
@@ -117,8 +137,11 @@ export function useReviewStatuses(ids: number[]): ReadonlyMap<number, ReviewStat
       });
     return () => controller.abort();
   }, [key, changed]);
-  return key ? statuses : new Map();
+  const ready = Boolean(key) && state.key === key;
+  return { statuses: ready ? state.statuses : EMPTY_STATUSES, ready };
 }
+
+const EMPTY_STATUSES: ReadonlyMap<number, ReviewStatus> = new Map();
 
 /** Every review and verified reply for one contract, newest first. */
 export function useContractReviews(contractId: number) {

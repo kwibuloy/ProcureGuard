@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { contractsPath, useApi, type ContractList } from '../api';
-import { useReviewStatuses } from '../reviews';
+import { useReviewStatusState } from '../reviews';
 import { CLEARED_FILTERS } from '../pages/queue/query';
 
 const TOP = 50;
@@ -25,8 +25,9 @@ export function ReviewProgress({ runId }: { runId: number }) {
     ),
   );
   const ids = top.data?.items.map((row) => row.id) ?? [];
-  const statuses = useReviewStatuses(ids);
-  if (!ids.length) return null;
+  const { statuses, ready } = useReviewStatusState(ids);
+  // Until the statuses arrive, "0 reviewed" would be a claim, not a figure.
+  if (!ids.length || !ready) return null;
   const reviewed = ids.filter((id) => {
     const status = statuses.get(id);
     return status && status !== 'not_reviewed';

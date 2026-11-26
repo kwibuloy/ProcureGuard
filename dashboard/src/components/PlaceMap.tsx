@@ -29,17 +29,17 @@ export interface PlaceFilter {
 const MAP_WIDTH = 600;
 const SHADES = 5;
 
-// Map files are fetched once per page load and kept.
+// Map files are fetched once per page load and kept. A failed fetch is not kept,
+// so trying again fetches the file again instead of repeating the failure.
 const files = new Map<string, Promise<unknown>>();
 function load<T>(path: string): Promise<T> {
   if (!files.has(path)) {
-    files.set(
-      path,
-      fetch(path).then((response) => {
-        if (!response.ok) throw new Error(`Map file not found: ${path}`);
-        return response.json();
-      }),
-    );
+    const request = fetch(path).then((response) => {
+      if (!response.ok) throw new Error(`Map file not found: ${path}`);
+      return response.json();
+    });
+    request.catch(() => files.delete(path));
+    files.set(path, request);
   }
   return files.get(path) as Promise<T>;
 }
@@ -163,7 +163,9 @@ export function PlaceMap({
   const [hovered, setHovered] = useState<number | null>(null);
   const [topology, setTopology] = useState<{ key: string; shapes: Shape[] } | null>(null);
   const [index, setIndex] = useState<MapIndex | null>(null);
-  const [failed, setFailed] = useState(false);
+  // The map file that failed to load, so moving to another level tries afresh.
+  const [failedFile, setFailedFile] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const file =
     level.kind === 'country'
@@ -177,17 +179,17 @@ export function PlaceMap({
     let live = true;
     load<Topology>(file)
       .then((data) => live && setTopology({ key: file, shapes: decode(data) }))
-      .catch(() => live && setFailed(true));
+      .catch(() => live && setFailedFile(file));
     // Below the country level, names have to be matched to shapes.
     if (level.kind !== 'country' && !index) {
       load<MapIndex>('/maps/index.json')
         .then((data) => live && setIndex(data))
-        .catch(() => live && setFailed(true));
+        .catch(() => live && setFailedFile(file));
     }
     return () => {
       live = false;
     };
-  }, [visible, file, level.kind, index]);
+  }, [visible, file, level.kind, index, attempt]);
 
   const regions = useMemo(() => (rows.data ? regionTotals(rows.data) : null), [rows.data]);
   const matched = useMemo(
@@ -203,6 +205,7 @@ export function PlaceMap({
         : matched?.cities.get(code);
 
   const ready = topology?.key === file ? topology : null;
+  const failed = failedFile === file;
   const codeKey =
     level.kind === 'country' ? 'adm1_psgc' : level.kind === 'region' ? 'adm2_psgc' : 'adm3_psgc';
   const nameKey =
@@ -368,7 +371,19 @@ export function PlaceMap({
       <div className="place-map-body">
         <div className="map-frame" aria-busy={!drawn}>
           {failed ? (
-            <p className="card-note">The map could not be loaded.</p>
+            <p className="card-note">
+              The map could not be loaded.{' '}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setFailedFile(null);
+                  setAttempt((n) => n + 1);
+                }}
+              >
+                Try again
+              </button>
+            </p>
           ) : drawn ? (
             <svg
               viewBox={`0 0 ${MAP_WIDTH} ${drawn.height}`}
@@ -390,7 +405,10 @@ export function PlaceMap({
                 selected={selectedCity}
                 onPick={pick}
                 onHover={setHovered}
-                label={(code, name) => `${name}: ${describe(totalsFor(code))}`}
+                label={(code, name) =>
+                  // Before the figures arrive, a missing total is unknown, not zero.
+                  figuresReady ? `${name}: ${describe(totalsFor(code))}` : name
+                }
               />
             </svg>
           ) : (
@@ -409,11 +427,20 @@ export function PlaceMap({
           <div className="map-focus" aria-live="polite">
             <p className="map-focus-name">{focusName}</p>
             <p className="card-note">
-              {!figuresReady
-                ? 'Loading figures…'
-                : focus !== null || level.kind !== 'country'
-                  ? describe(focusTotals)
-                  : 'Select a region to begin.'}
+              {rows.error ? (
+                <>
+                  The figures could not be loaded.{' '}
+                  <button type="button" className="text-button" onClick={rows.reload}>
+                    Try again
+                  </button>
+                </>
+              ) : !figuresReady ? (
+                'Loading figures…'
+              ) : focus !== null || level.kind !== 'country' ? (
+                describe(focusTotals)
+              ) : (
+                'Select a region to begin.'
+              )}
             </p>
           </div>
 
